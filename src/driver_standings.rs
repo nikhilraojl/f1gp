@@ -88,21 +88,21 @@ fn parse_driver_table_row(element: ElementRef) -> Result<Driver> {
     })
 }
 
-pub fn driver_standings() -> Result<Vec<Driver>> {
+pub fn driver_standings(force_save: bool) -> Result<Vec<Driver>> {
     let schedule_dir = std::env::temp_dir().join("f1_2024_schedule");
     if !schedule_dir.exists() {
         std::fs::create_dir(&schedule_dir)?;
     }
     let standings_file = schedule_dir.join("2024_driver_standings.json");
-    if standings_file.exists() {
-        let data = fs::read_to_string(standings_file)?;
-        let standings: Vec<Driver> = serde_json::from_str(&data)?;
-        Ok(standings)
-    } else {
+    if !standings_file.exists() || force_save {
         let raw_data = fetch_f1_standings()?;
         let parsed_data = parse_html_driver_standings(&raw_data)?;
         let json_data_to_cache = serde_json::to_string(&parsed_data)?;
         fs::write(standings_file, json_data_to_cache)?;
         Ok(parsed_data)
+    } else {
+        let data = fs::read_to_string(standings_file)?;
+        let standings: Vec<Driver> = serde_json::from_str(&data)?;
+        Ok(standings)
     }
 }

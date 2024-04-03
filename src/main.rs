@@ -23,10 +23,10 @@ fn run() -> Result<()> {
 
     if let Some(arg) = args.next() {
         if arg == "next" {
-            let races = race_schedule()?;
             let curr_dt = Local::now();
             let mut output = String::new();
-            for race in races.races {
+
+            for race in race_schedule(false)?.races {
                 if curr_dt < race.gp_start_dt() {
                     race.pp_race_name(&mut output)?;
                     break;
@@ -34,9 +34,12 @@ fn run() -> Result<()> {
             }
             println!("{output}");
         } else if arg == "standings" {
-            for driver in driver_standings()? {
+            for driver in driver_standings(false)? {
                 println!("{:<20} {}", driver.name, driver.points)
             }
+        } else if arg == "pull" {
+            race_schedule(true)?;
+            driver_standings(true)?;
         }
     }
     Ok(())

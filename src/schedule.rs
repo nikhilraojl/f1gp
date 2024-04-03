@@ -201,20 +201,20 @@ pub struct Races {
     pub races: Vec<GP>,
 }
 
-pub fn race_schedule() -> Result<Races> {
+pub fn race_schedule(force_save: bool) -> Result<Races> {
     let schedule_dir = std::env::temp_dir().join("f1_2024_schedule");
     if !schedule_dir.exists() {
         std::fs::create_dir(&schedule_dir)?;
     }
     let schedule_file = schedule_dir.join("2024_schedule.json");
-    if schedule_file.exists() {
-        let data = fs::read_to_string(schedule_file)?;
-        let races: Races = serde_json::from_str(&data)?;
-        Ok(races)
-    } else {
+    if !schedule_file.exists() || force_save {
         let raw_data = get_data_from_github()?;
         fs::write(schedule_file, &raw_data)?;
         let races: Races = serde_json::from_str(&raw_data)?;
+        Ok(races)
+    } else {
+        let data = fs::read_to_string(schedule_file)?;
+        let races: Races = serde_json::from_str(&data)?;
         Ok(races)
     }
 }
