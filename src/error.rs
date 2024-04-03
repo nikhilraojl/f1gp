@@ -5,6 +5,7 @@ pub enum Error {
     Fmt(std::fmt::Error),
     IO(std::io::Error),
     SerdeJson(serde_json::Error),
+    Ureq(ureq::Error),
 }
 
 impl Display for Error {
@@ -13,6 +14,7 @@ impl Display for Error {
             Self::Fmt(err) => write!(fmt, "{err}"),
             Self::IO(err) => write!(fmt, "{err}"),
             Self::SerdeJson(err) => write!(fmt, "{err}"),
+            Self::Ureq(err) => write!(fmt, "{err}"),
         }
     }
 }
@@ -30,6 +32,11 @@ impl From<std::io::Error> for Error {
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
         Self::SerdeJson(err)
+    }
+}
+impl From<ureq::Error> for Error {
+    fn from(err: ureq::Error) -> Self {
+        Self::Ureq(err)
     }
 }
 

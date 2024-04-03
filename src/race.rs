@@ -170,11 +170,6 @@ impl Weekend {
 pub struct GP {
     name: String,
     location: String,
-    latitude: f32,
-    longitude: f32,
-    round: usize,
-    slug: String,
-    localeKey: String,
     sessions: Weekend,
 }
 impl GP {
