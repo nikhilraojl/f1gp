@@ -1,10 +1,11 @@
 use chrono::{DateTime, Local};
 use serde::Deserialize;
 use std::fmt::Write;
+use std::fs;
 
 use crate::error::Result;
 
-const STR_FMT: &'static str = "%a %d/%m/%Y %H:%M";
+const STR_FMT: &str = "%a %d/%m/%Y %H:%M";
 
 fn pp_session(
     session_name: &str,
@@ -198,4 +199,31 @@ impl GP {
 #[derive(Deserialize, Debug)]
 pub struct Races {
     pub races: Vec<GP>,
+}
+
+pub fn race_schedule() -> Result<Races> {
+    let schedule_dir = std::env::temp_dir().join("f1_2024_schedule");
+    if !schedule_dir.exists() {
+        std::fs::create_dir(&schedule_dir)?;
+    }
+    let schedule_file = schedule_dir.join("2024_schedule.json");
+    if schedule_file.exists() {
+        let data = fs::read_to_string(schedule_file)?;
+        let races: Races = serde_json::from_str(&data)?;
+        Ok(races)
+    } else {
+        let raw_data = get_data_from_github()?;
+        fs::write(schedule_file, &raw_data)?;
+        let races: Races = serde_json::from_str(&raw_data)?;
+        Ok(races)
+    }
+}
+
+fn get_data_from_github() -> Result<String> {
+    println!("Fetching schedule from internet");
+    let body: String =
+        ureq::get("https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/2024.json")
+            .call()?
+            .into_string()?;
+    Ok(body)
 }

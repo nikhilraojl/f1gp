@@ -5,16 +5,22 @@ pub enum Error {
     Fmt(std::fmt::Error),
     IO(std::io::Error),
     SerdeJson(serde_json::Error),
-    Ureq(ureq::Error),
+    Ureq(Box<ureq::Error>),
+    ParseInt(std::num::ParseIntError),
+    Scraper,
+    ParserDriverInfo,
 }
 
 impl Display for Error {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::Fmt(err) => write!(fmt, "{err}"),
             Self::IO(err) => write!(fmt, "{err}"),
             Self::SerdeJson(err) => write!(fmt, "{err}"),
             Self::Ureq(err) => write!(fmt, "{err}"),
+            Self::Scraper => write!(fmt, "HTML parsing failed"),
+            Self::ParseInt(err) => write!(fmt, "{err}"),
+            Self::ParserDriverInfo => write!(fmt, "Driver table row parsing failed"),
         }
     }
 }
@@ -36,7 +42,12 @@ impl From<serde_json::Error> for Error {
 }
 impl From<ureq::Error> for Error {
     fn from(err: ureq::Error) -> Self {
-        Self::Ureq(err)
+        Self::Ureq(Box::new(err))
+    }
+}
+impl From<std::num::ParseIntError> for Error {
+    fn from(err: std::num::ParseIntError) -> Self {
+        Self::ParseInt(err)
     }
 }
 

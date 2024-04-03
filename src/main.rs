@@ -1,11 +1,12 @@
+mod driver_standings;
 mod error;
-mod race;
+mod schedule;
 
 use chrono::Local;
-use std::fs;
 
+use driver_standings::driver_standings;
 use error::Result;
-use race::Races;
+use schedule::race_schedule;
 
 fn main() {
     if let Err(err) = run() {
@@ -32,36 +33,12 @@ fn run() -> Result<()> {
                 }
             }
             println!("{output}");
+        } else if arg == "standings" {
+            for driver in driver_standings()? {
+                println!("{:<20} {}", driver.name, driver.points)
+            }
         }
     }
     Ok(())
     // println!("{}", now.elapsed().as_millis());
-}
-
-fn race_schedule() -> Result<Races> {
-    let schedule_dir = std::env::temp_dir().join("f1_2024_schedule");
-    if !schedule_dir.exists() {
-        std::fs::create_dir(&schedule_dir)?;
-    }
-    let schedule_file = schedule_dir.join("2024_schedule.json");
-    let races = if schedule_file.exists() {
-        let data = fs::read_to_string(schedule_file)?;
-        let races: Races = serde_json::from_str(&data)?;
-        races
-    } else {
-        let raw_data = get_data_from_github()?;
-        fs::write(schedule_file, &raw_data)?;
-        let races: Races = serde_json::from_str(&raw_data)?;
-        races
-    };
-
-    Ok(races)
-}
-
-fn get_data_from_github() -> Result<String> {
-    let body: String =
-        ureq::get("https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/2024.json")
-            .call()?
-            .into_string()?;
-    Ok(body)
 }
