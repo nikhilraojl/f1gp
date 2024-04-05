@@ -157,7 +157,10 @@ impl GP {
         let race_name = format!("{} Grand Prix / {}", self.name, self.location);
         let is_past = if curr_dt > self.sessions.gp_start_dt() {
             "x"
-        } else {
+        } else if (self.sessions.gp_start_dt() - curr_dt).num_days() < 6 {
+            ">"
+        }
+        else {
             " "
         };
         writeln!(output, "[{}] {}", is_past, race_name)?;
