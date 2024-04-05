@@ -34,7 +34,7 @@ fn run() -> Result<()> {
 
                 for race in race_schedule(false)?.races {
                     if curr_dt < race.gp_start_dt() {
-                        race.pp_race_name(&mut output)?;
+                        race.pp_race_schedule(&mut output)?;
                         num_to_show -= 1;
                         if num_to_show == 0 {
                             break;
@@ -52,7 +52,9 @@ fn run() -> Result<()> {
                 race_schedule(true)?;
                 driver_standings(true)?;
             }
-            _ => {eprintln!("Not a valid command")}
+            _ => {
+                eprintln!("Not a valid command")
+            }
         }
     }
     Ok(())

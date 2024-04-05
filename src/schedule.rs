@@ -9,13 +9,21 @@ const STR_FMT: &str = "%a %d/%m/%Y %H:%M";
 
 fn pp_session(
     session_name: &str,
-    session_dt: &str,
-    session_width: usize,
+    session_dt: DateTime<Local>,
+    curr_dt: DateTime<Local>,
+    pad_session: usize,
     line_width: usize,
 ) -> String {
+    let is_past = if curr_dt > session_dt { "x" } else { " " };
+
     format!(
         "| {:<line_width$} |",
-        format!("{:<session_width$}: {}", session_name, session_dt)
+        format!(
+            "[{}] {:<pad_session$}: {}",
+            is_past,
+            session_name,
+            session_dt.format(STR_FMT)
+        )
     )
 }
 
@@ -30,55 +38,31 @@ struct NormalWeekend {
 impl NormalWeekend {
     pub fn pp_normal(&self, output: &mut String, line_width: usize) -> Result<()> {
         let session_width = 5;
+        let curr_dt = Local::now();
         writeln!(
             output,
             "{}",
-            pp_session(
-                "FP 1",
-                &self.fp1.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("FP 1", self.fp1, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session(
-                "FP 2",
-                &self.fp2.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("FP 2", self.fp2, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session(
-                "FP 3",
-                &self.fp3.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("FP 3", self.fp3, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session(
-                "Quali",
-                &self.qualifying.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("Quali", self.qualifying, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session(
-                "Race",
-                &self.gp.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("Race", self.gp, curr_dt, session_width, line_width)
         )?;
         Ok(())
     }
@@ -96,22 +80,19 @@ struct SprintWeekend {
 impl SprintWeekend {
     fn pp_sprint(&self, output: &mut String, line_width: usize) -> Result<()> {
         let session_width = 9;
+        let curr_dt = Local::now();
         writeln!(
             output,
             "{}",
-            pp_session(
-                "FP 1",
-                &self.fp1.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("FP 1", self.fp1, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
             pp_session(
                 "Spr Quali",
-                &self.sprintQualifying.format(STR_FMT).to_string(),
+                self.sprintQualifying,
+                curr_dt,
                 session_width,
                 line_width
             )
@@ -119,32 +100,17 @@ impl SprintWeekend {
         writeln!(
             output,
             "{}",
-            pp_session(
-                "Sprint",
-                &self.sprint.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("Sprint", self.sprint, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session(
-                "Quali",
-                &self.qualifying.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("Quali", self.qualifying, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session(
-                "Race",
-                &self.gp.format(STR_FMT).to_string(),
-                session_width,
-                line_width
-            )
+            pp_session("Race", self.gp, curr_dt, session_width, line_width)
         )?;
         Ok(())
     }
@@ -174,21 +140,27 @@ pub struct GP {
     sessions: Weekend,
 }
 impl GP {
-    pub fn pp_race_name(&self, output: &mut String) -> Result<()> {
+    pub fn pp_race_schedule(&self, output: &mut String) -> Result<()> {
         let race_name = format!("{} Grand Prix / {}", self.name, self.location);
-        let width = if race_name.len() < 38 {
+        let line_width = if race_name.len() < 38 {
             38
         } else {
             race_name.len()
         };
-        writeln!(output, "+{}+", "-".repeat(width + 2))?;
-        writeln!(output, "| {race_name:^width$} |")?;
-        writeln!(output, "+{}+", "-".repeat(width + 2))?;
+        let border_width = line_width + 2;
+        // format GP title
+        writeln!(output, "+{}+", "-".repeat(border_width))?;
+        writeln!(output, "| {race_name:^line_width$} |")?;
+        writeln!(output, "+{}+", "-".repeat(border_width))?;
+
+        // format GP sessions
         match self.sessions {
-            Weekend::Normal(ref session) => session.pp_normal(output, width),
-            Weekend::Sprint(ref session) => session.pp_sprint(output, width),
+            Weekend::Normal(ref session) => session.pp_normal(output, line_width),
+            Weekend::Sprint(ref session) => session.pp_sprint(output, line_width),
         }?;
-        writeln!(output, "+{}+", "-".repeat(width + 2))?;
+
+        // closing border
+        writeln!(output, "+{}+", "-".repeat(border_width))?;
         Ok(())
     }
     pub fn gp_start_dt(&self) -> DateTime<Local> {
