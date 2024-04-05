@@ -1,10 +1,10 @@
-mod driver_standings;
+mod standings;
 mod error;
 mod schedule;
 
 use chrono::Local;
 
-use driver_standings::driver_standings;
+use standings::GpResults;
 use error::Result;
 use schedule::race_schedule;
 
@@ -52,13 +52,23 @@ fn run() -> Result<()> {
                 println!("{output}");
             }
             "drivers" => {
-                for driver in driver_standings(false)? {
+                println!("DRIVER STANDINGS:");
+                println!("-----------------");
+                for driver in GpResults::Driver.get_standings(false)? {
                     println!("{:<20} {}", driver.name, driver.points)
+                }
+            }
+            "teams" => {
+                println!("TEAM STANDINGS:");
+                println!("---------------");
+                for team in GpResults::Team.get_standings(false)? {
+                    println!("{:<30} {}", team.name, team.points)
                 }
             }
             "pull" => {
                 race_schedule(true)?;
-                driver_standings(true)?;
+                GpResults::Driver.get_standings(true)?;
+                GpResults::Team.get_standings(true)?;
             }
             _ => {
                 eprintln!("Not a valid command")

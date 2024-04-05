@@ -5,7 +5,20 @@ use std::fs;
 
 use crate::error::Result;
 
-const STR_FMT: &str = "%a %d/%m/%Y %H:%M";
+// for date time formatting
+pub const STR_FMT: &str = "%a %d/%m/%Y %H:%M";
+
+// internet resources
+pub const SCHEDULE: &str = "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/2024.json";
+
+// str constants
+pub const FP1: &str = "FP 1";
+pub const FP2: &str = "FP 2";
+pub const FP3: &str = "FP 2";
+pub const QUALI: &str = "Quali";
+pub const SPR_QUALI: &str = "Spr Quali";
+pub const SPRINT: &str = "Sprint";
+pub const RACE: &str = "Race";
 
 fn pp_session(
     session_name: &str,
@@ -42,27 +55,27 @@ impl NormalWeekend {
         writeln!(
             output,
             "{}",
-            pp_session("FP 1", self.fp1, curr_dt, session_width, line_width)
+            pp_session(FP1, self.fp1, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session("FP 2", self.fp2, curr_dt, session_width, line_width)
+            pp_session(FP2, self.fp2, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session("FP 3", self.fp3, curr_dt, session_width, line_width)
+            pp_session(FP3, self.fp3, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session("Quali", self.qualifying, curr_dt, session_width, line_width)
+            pp_session(QUALI, self.qualifying, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session("Race", self.gp, curr_dt, session_width, line_width)
+            pp_session(RACE, self.gp, curr_dt, session_width, line_width)
         )?;
         Ok(())
     }
@@ -84,13 +97,13 @@ impl SprintWeekend {
         writeln!(
             output,
             "{}",
-            pp_session("FP 1", self.fp1, curr_dt, session_width, line_width)
+            pp_session(FP1, self.fp1, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
             pp_session(
-                "Spr Quali",
+                SPR_QUALI,
                 self.sprintQualifying,
                 curr_dt,
                 session_width,
@@ -100,17 +113,17 @@ impl SprintWeekend {
         writeln!(
             output,
             "{}",
-            pp_session("Sprint", self.sprint, curr_dt, session_width, line_width)
+            pp_session(SPRINT, self.sprint, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session("Quali", self.qualifying, curr_dt, session_width, line_width)
+            pp_session(QUALI, self.qualifying, curr_dt, session_width, line_width)
         )?;
         writeln!(
             output,
             "{}",
-            pp_session("Race", self.gp, curr_dt, session_width, line_width)
+            pp_session(RACE, self.gp, curr_dt, session_width, line_width)
         )?;
         Ok(())
     }
@@ -140,9 +153,13 @@ pub struct GP {
     sessions: Weekend,
 }
 impl GP {
-    pub fn pp_race_title(&self, output:&mut String, curr_dt: DateTime<Local>) -> Result<()> {
+    pub fn pp_race_title(&self, output: &mut String, curr_dt: DateTime<Local>) -> Result<()> {
         let race_name = format!("{} Grand Prix / {}", self.name, self.location);
-        let is_past = if curr_dt > self.sessions.gp_start_dt() { "x" } else { " " };
+        let is_past = if curr_dt > self.sessions.gp_start_dt() {
+            "x"
+        } else {
+            " "
+        };
         writeln!(output, "[{}] {}", is_past, race_name)?;
         Ok(())
     }
@@ -200,9 +217,6 @@ pub fn race_schedule(force_save: bool) -> Result<Races> {
 
 fn get_data_from_github() -> Result<String> {
     println!("Fetching schedule from internet");
-    let body: String =
-        ureq::get("https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/2024.json")
-            .call()?
-            .into_string()?;
+    let body: String = ureq::get(SCHEDULE).call()?.into_string()?;
     Ok(body)
 }
