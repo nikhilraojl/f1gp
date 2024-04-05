@@ -1,12 +1,12 @@
-mod standings;
 mod error;
 mod schedule;
+mod standings;
 
 use chrono::Local;
 
-use standings::GpResults;
 use error::Result;
 use schedule::race_schedule;
+use standings::GpResults;
 
 fn main() {
     if let Err(err) = run() {
@@ -70,8 +70,22 @@ fn run() -> Result<()> {
                 GpResults::Driver.get_standings(true)?;
                 GpResults::Team.get_standings(true)?;
             }
+            "help" => {
+                println!(
+                    "{:<10}: Shows all Grand Prix Races for current calendar year",
+                    "list"
+                );
+                println!("{:<10}: Shows session schedule of next Grand Prix", "next");
+                println!(
+                    "{:<10}: Shows session schedule for next #num of Grand Prix Races",
+                    "next <#>"
+                );
+                println!("{:<10}: Shows current driver standings", "drivers");
+                println!("{:<10}: Shows current team/constructor standings", "teams");
+                println!("{:<10}: Pull latest data from internet sources. Required for updated standings", "pull");
+            }
             _ => {
-                eprintln!("Not a valid command")
+                eprintln!("Not a valid command. Run `f1gp help` for possible commands")
             }
         }
     }
