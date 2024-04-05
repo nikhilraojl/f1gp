@@ -22,14 +22,22 @@ fn run() -> Result<()> {
     args.next();
 
     if let Some(arg) = args.next() {
+        let curr_dt = Local::now();
         match arg.as_ref() {
+            "list" => {
+                let mut output = String::new();
+
+                for race in race_schedule(false)?.races {
+                    race.pp_race_title(&mut output, curr_dt)?;
+                }
+                println!("{output}");
+            }
             "next" => {
                 let mut num_to_show: u8 = if let Some(arg) = args.next() {
                     arg.parse()?
                 } else {
                     1
                 };
-                let curr_dt = Local::now();
                 let mut output = String::new();
 
                 for race in race_schedule(false)?.races {
@@ -43,7 +51,7 @@ fn run() -> Result<()> {
                 }
                 println!("{output}");
             }
-            "standings" => {
+            "drivers" => {
                 for driver in driver_standings(false)? {
                     println!("{:<20} {}", driver.name, driver.points)
                 }
