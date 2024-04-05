@@ -4,6 +4,7 @@ use std::fmt::Write;
 use std::fs;
 
 use crate::error::Result;
+use crate::utils::get_or_create_tmp_dir;
 
 // for date time formatting
 pub const STR_FMT: &str = "%a %d/%m/%Y %H:%M";
@@ -146,7 +147,6 @@ impl Weekend {
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(non_snake_case)]
 pub struct GP {
     name: String,
     location: String,
@@ -159,8 +159,7 @@ impl GP {
             "x"
         } else if (self.sessions.gp_start_dt() - curr_dt).num_days() < 6 {
             ">"
-        }
-        else {
+        } else {
             " "
         };
         writeln!(output, "[{}] {}", is_past, race_name)?;
@@ -199,27 +198,25 @@ impl GP {
 pub struct Races {
     pub races: Vec<GP>,
 }
-
-pub fn race_schedule(force_save: bool) -> Result<Races> {
-    let schedule_dir = std::env::temp_dir().join("f1_2024_schedule");
-    if !schedule_dir.exists() {
-        std::fs::create_dir(&schedule_dir)?;
+impl Races {
+    fn get_data_from_github() -> Result<String> {
+        println!("Fetching schedule");
+        let body: String = ureq::get(SCHEDULE).call()?.into_string()?;
+        Ok(body)
     }
-    let schedule_file = schedule_dir.join("2024_schedule.json");
-    if !schedule_file.exists() || force_save {
-        let raw_data = get_data_from_github()?;
-        fs::write(schedule_file, &raw_data)?;
-        let races: Races = serde_json::from_str(&raw_data)?;
-        Ok(races)
-    } else {
-        let data = fs::read_to_string(schedule_file)?;
-        let races: Races = serde_json::from_str(&data)?;
-        Ok(races)
-    }
-}
 
-fn get_data_from_github() -> Result<String> {
-    println!("Fetching schedule from internet");
-    let body: String = ureq::get(SCHEDULE).call()?.into_string()?;
-    Ok(body)
+    pub fn race_schedule(force_save: bool) -> Result<Races> {
+        let tmp_dir = get_or_create_tmp_dir()?;
+        let schedule_file = tmp_dir.join("2024_schedule.json");
+        if !schedule_file.exists() || force_save {
+            let raw_data = Self::get_data_from_github()?;
+            fs::write(schedule_file, &raw_data)?;
+            let races: Races = serde_json::from_str(&raw_data)?;
+            Ok(races)
+        } else {
+            let data = fs::read_to_string(schedule_file)?;
+            let races: Races = serde_json::from_str(&data)?;
+            Ok(races)
+        }
+    }
 }

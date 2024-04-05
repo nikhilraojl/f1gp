@@ -1,11 +1,12 @@
 mod error;
 mod schedule;
 mod standings;
+mod utils;
 
 use chrono::Local;
 
 use error::Result;
-use schedule::race_schedule;
+use schedule::Races;
 use standings::GpResults;
 
 fn main() {
@@ -27,7 +28,7 @@ fn run() -> Result<()> {
             "list" => {
                 let mut output = String::new();
 
-                for race in race_schedule(false)?.races {
+                for race in Races::race_schedule(false)?.races {
                     race.pp_race_title(&mut output, curr_dt)?;
                 }
                 println!("{output}");
@@ -40,7 +41,7 @@ fn run() -> Result<()> {
                 };
                 let mut output = String::new();
 
-                for race in race_schedule(false)?.races {
+                for race in Races::race_schedule(false)?.races {
                     if curr_dt < race.gp_start_dt() {
                         race.pp_race_schedule(&mut output)?;
                         num_to_show -= 1;
@@ -66,7 +67,7 @@ fn run() -> Result<()> {
                 }
             }
             "pull" => {
-                race_schedule(true)?;
+                Races::race_schedule(true)?;
                 GpResults::Driver.get_standings(true)?;
                 GpResults::Team.get_standings(true)?;
             }
@@ -82,12 +83,17 @@ fn run() -> Result<()> {
                 );
                 println!("{:<10}: Shows current driver standings", "drivers");
                 println!("{:<10}: Shows current team/constructor standings", "teams");
-                println!("{:<10}: Pull latest data from internet sources. Required for updated standings", "pull");
+                println!(
+                    "{:<10}: Pull latest data from sources. Required for updated standings",
+                    "pull"
+                );
             }
             _ => {
                 eprintln!("Not a valid command. Run `f1gp help` for possible commands")
             }
         }
+    } else {
+        eprintln!("Not a valid command. Run `f1gp help` for possible commands")
     }
     Ok(())
     // println!("{}", now.elapsed().as_millis());

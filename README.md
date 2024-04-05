@@ -18,7 +18,7 @@ Run `f1gp pull` before trying any of the available options
 ...
 
 x -> GP weekend completed
-> -> GP weekend in progress
+> -> GP weekend in current week
   -> GP weekend in future
 ```
 
@@ -46,7 +46,7 @@ x -> GP weekend completed
 
 `teams`: Shows current team/constructor standings
 
-`pull`: Pull latest data from internet sources. Data from all these sources is fetched once and cached for subsequent commands. Do a fresh pull if data needs to be updated. There are 3 sources currently used
+`pull`: Pull latest data from sources. Data from all these sources is fetched once and cached for subsequent commands. Do a fresh `f1gp pull` if any data needs to be updated. There are 3 sources currently used
 
 - https://www.formula1.com/en/results.html/2024/drivers.html
 - https://www.formula1.com/en/results.html/2024/team.html
