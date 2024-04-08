@@ -97,7 +97,7 @@ fn run() -> Result<()> {
                     "{:<10}: Shows all Grand Prix Races for current calendar year",
                     "list"
                 );
-                println!("{:<10}: Shows session schedule of next Grand Prix", "next");
+                println!("{:<10}: Shows session schedule of next Grand Prix. Also shows time until next session", "next");
                 println!(
                     "{:<10}: Shows session schedule for next #num of Grand Prix Races",
                     "next <#>"

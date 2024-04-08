@@ -41,6 +41,28 @@ fn pp_session(
     )
 }
 
+fn time_until_next_session(sessions: [&DateTime<Local>; 5], curr_dt: DateTime<Local>) -> String {
+    let mut next_session: Option<DateTime<Local>> = None;
+    for session_dt in sessions {
+        if curr_dt < *session_dt {
+            next_session = Some(*session_dt);
+            break;
+        }
+    }
+
+    let mut output = String::new();
+    if let Some(dt) = next_session {
+        let y = dt - curr_dt;
+        output = format!(
+            "Next session in: {} days, {} hours, {} minutes",
+            y.num_days(),
+            y.num_hours() % (y.num_days() * 24),
+            y.num_minutes() % (y.num_hours() * 60)
+        );
+    }
+    output
+}
+
 #[derive(Deserialize, Debug)]
 struct NormalWeekend {
     fp1: DateTime<Local>,
@@ -79,6 +101,12 @@ impl NormalWeekend {
             pp_session(RACE, self.gp, curr_dt, session_width, line_width)
         )?;
         Ok(())
+    }
+
+    fn pp_until_next_normal(&self) -> String {
+        let curr_dt = Local::now();
+        let sessions = [&self.fp1, &self.fp2, &self.fp3, &self.qualifying, &self.gp];
+        time_until_next_session(sessions, curr_dt)
     }
 }
 
@@ -128,21 +156,47 @@ impl SprintWeekend {
         )?;
         Ok(())
     }
+
+    fn pp_until_next_sprint(&self) -> String {
+        let curr_dt = Local::now();
+        let sessions = [
+            &self.fp1,
+            &self.sprintQualifying,
+            &self.sprint,
+            &self.qualifying,
+            &self.gp,
+        ];
+        time_until_next_session(sessions, curr_dt)
+    }
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
-enum Weekend {
+enum Sessions {
     Normal(NormalWeekend),
     Sprint(SprintWeekend),
 }
 
-impl Weekend {
+impl Sessions {
     pub fn gp_start_dt(&self) -> DateTime<Local> {
         match self {
             Self::Normal(sessions) => sessions.gp,
             Self::Sprint(sessions) => sessions.gp,
         }
+    }
+    fn pp_time_until_next_session(&self) -> String {
+        match self {
+            Self::Normal(sessions) => sessions.pp_until_next_normal(),
+            Self::Sprint(sessions) => sessions.pp_until_next_sprint(),
+        }
+    }
+
+    fn pp_session(&self, output: &mut String, line_width: usize) -> Result<()> {
+        match self {
+            Self::Normal(ref session) => session.pp_normal(output, line_width),
+            Self::Sprint(ref session) => session.pp_sprint(output, line_width),
+        }?;
+        Ok(())
     }
 }
 
@@ -150,7 +204,7 @@ impl Weekend {
 pub struct GP {
     name: String,
     location: String,
-    sessions: Weekend,
+    sessions: Sessions,
 }
 impl GP {
     pub fn pp_race_title(
@@ -184,14 +238,15 @@ impl GP {
         writeln!(output, "| {race_name:^line_width$} |")?;
         writeln!(output, "+{}+", "-".repeat(border_width))?;
 
-        // format GP sessions
-        match self.sessions {
-            Weekend::Normal(ref session) => session.pp_normal(output, line_width),
-            Weekend::Sprint(ref session) => session.pp_sprint(output, line_width),
-        }?;
+        // format all GP sessions
+        self.sessions.pp_session(output, line_width)?;
 
         // closing border
         writeln!(output, "+{}+", "-".repeat(border_width))?;
+
+        // time until next session
+        let until_next = self.sessions.pp_time_until_next_session();
+        writeln!(output, "{}", until_next)?;
         Ok(())
     }
     pub fn gp_start_dt(&self) -> DateTime<Local> {
