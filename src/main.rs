@@ -1,4 +1,5 @@
 mod error;
+mod results;
 mod schedule;
 mod standings;
 mod utils;
@@ -6,6 +7,7 @@ mod utils;
 use chrono::Local;
 
 use error::Result;
+use results::get_completed_results;
 use schedule::Races;
 use standings::GpResults;
 
@@ -70,6 +72,16 @@ fn run() -> Result<()> {
                 Races::race_schedule(true)?;
                 GpResults::Driver.get_standings(true)?;
                 GpResults::Team.get_standings(true)?;
+            }
+            "results" => {
+                for gp in get_completed_results(false)? {
+                    println!("{}", "-".repeat(40));
+                    println!("{}", gp.gp_name);
+                    println!("{}", "-".repeat(40));
+                    for driver in gp.results {
+                        println!("{}: {}", driver.name, driver.points);
+                    }
+                }
             }
             "help" => {
                 println!(

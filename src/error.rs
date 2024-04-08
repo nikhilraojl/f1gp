@@ -10,6 +10,7 @@ pub enum Error {
     Scraper,
     ParseDriverInfo,
     ParseTeamInfo,
+    ParseRaceResults,
 }
 
 impl Display for Error {
@@ -23,6 +24,7 @@ impl Display for Error {
             Self::ParseInt(err) => write!(fmt, "{err}"),
             Self::ParseDriverInfo => write!(fmt, "Driver table row parsing failed"),
             Self::ParseTeamInfo => write!(fmt, "Team table row parsing failed"),
+            Self::ParseRaceResults => write!(fmt, "Race results table parsing failed"),
         }
     }
 }

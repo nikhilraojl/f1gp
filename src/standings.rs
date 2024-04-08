@@ -1,20 +1,14 @@
 use scraper::{selectable::Selectable, ElementRef};
-use serde::{Deserialize, Serialize};
 use std::fs;
 
-// internet resources
-pub const DRIVER_STANDINGS: &str = "https://www.formula1.com/en/results.html/2024/drivers.html";
-pub const TEAM_STANDINGS: &str = "https://www.formula1.com/en/results.html/2024/team.html";
-
 use crate::error::{Error, Result};
-use crate::utils::get_or_create_tmp_dir;
+use crate::utils::{get_or_create_tmp_dir, PositionInfo};
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PositionInfo {
-    pub position: usize,
-    pub name: String,
-    pub points: usize,
-}
+pub const BASE_URL: &str = "https://www.formula1.com/en/results.html";
+// drivers
+const DRIVER_STANDINGS: &str = "2024/drivers.html";
+// teams
+const TEAM_STANDINGS: &str = "2024/team.html";
 
 fn parse_standings_html_table(html: &str, results: &GpResults) -> Result<Vec<PositionInfo>> {
     // As of this commit same table css selector can be used
@@ -140,14 +134,14 @@ impl GpResults {
         let url = match self {
             Self::Driver => {
                 println!("Fetching Driver standings");
-                DRIVER_STANDINGS
+                format!("{}/{}", BASE_URL, DRIVER_STANDINGS)
             }
             Self::Team => {
                 println!("Fetching Team standings");
-                TEAM_STANDINGS
+                format!("{}/{}", BASE_URL, TEAM_STANDINGS)
             }
         };
-        let data: String = ureq::get(url).call()?.into_string()?;
+        let data: String = ureq::get(&url).call()?.into_string()?;
         Ok(data)
     }
 
