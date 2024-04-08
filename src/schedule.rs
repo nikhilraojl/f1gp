@@ -153,7 +153,12 @@ pub struct GP {
     sessions: Weekend,
 }
 impl GP {
-    pub fn pp_race_title(&self, output: &mut String, curr_dt: DateTime<Local>) -> Result<()> {
+    pub fn pp_race_title(
+        &self,
+        output: &mut String,
+        curr_dt: DateTime<Local>,
+        round: usize,
+    ) -> Result<()> {
         let race_name = format!("{} Grand Prix / {}", self.name, self.location);
         let is_past = if curr_dt > self.sessions.gp_start_dt() {
             "x"
@@ -162,7 +167,7 @@ impl GP {
         } else {
             " "
         };
-        writeln!(output, "[{}] {}", is_past, race_name)?;
+        writeln!(output, "[{}]  {:>2}. {}", is_past, round, race_name)?;
         Ok(())
     }
 

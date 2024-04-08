@@ -7,7 +7,7 @@ mod utils;
 use chrono::Local;
 
 use error::Result;
-use results::get_completed_results;
+use results::CompletedRace;
 use schedule::Races;
 use standings::GpResults;
 
@@ -30,8 +30,8 @@ fn run() -> Result<()> {
             "list" => {
                 let mut output = String::new();
 
-                for race in Races::race_schedule(false)?.races {
-                    race.pp_race_title(&mut output, curr_dt)?;
+                for (idx, race) in Races::race_schedule(false)?.races.iter().enumerate() {
+                    race.pp_race_title(&mut output, curr_dt, idx + 1)?;
                 }
                 println!("{output}");
             }
@@ -68,20 +68,29 @@ fn run() -> Result<()> {
                     println!("{:<30} {}", team.name, team.points)
                 }
             }
+            "result" => {
+                let mut output = String::new();
+                let completed_gp = CompletedRace::get_completed_results(false)?;
+                let round: usize = if let Some(arg) = args.next() {
+                    arg.parse()?
+                } else {
+                    completed_gp.len()
+                };
+
+                if round > completed_gp.len() {
+                    eprintln!("Round {} does not have any results", round);
+                    return Ok(());
+                }
+                if let Some(race_result) = completed_gp.get(round - 1) {
+                    race_result.pp_completed_race_results(&mut output)?;
+                    println!("{output}");
+                };
+            }
             "pull" => {
                 Races::race_schedule(true)?;
                 GpResults::Driver.get_standings(true)?;
                 GpResults::Team.get_standings(true)?;
-            }
-            "results" => {
-                for gp in get_completed_results(false)? {
-                    println!("{}", "-".repeat(40));
-                    println!("{}", gp.gp_name);
-                    println!("{}", "-".repeat(40));
-                    for driver in gp.results {
-                        println!("{}: {}", driver.name, driver.points);
-                    }
-                }
+                CompletedRace::get_completed_results(true)?;
             }
             "help" => {
                 println!(
@@ -95,6 +104,11 @@ fn run() -> Result<()> {
                 );
                 println!("{:<10}: Shows current driver standings", "drivers");
                 println!("{:<10}: Shows current team/constructor standings", "teams");
+                println!("{:<10}: Shows last Grand Prix race result", "result");
+                println!(
+                    "{:<10}: Shows results of the requested Grand Prix race(#round)",
+                    "result <#>"
+                );
                 println!(
                     "{:<10}: Pull latest data from sources. Required for updated standings",
                     "pull"

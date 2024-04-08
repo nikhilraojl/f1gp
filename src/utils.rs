@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PositionInfo {
     pub position: usize,
