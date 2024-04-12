@@ -8,8 +8,10 @@ use chrono::Local;
 
 use error::Result;
 use results::CompletedRace;
-use schedule::Races;
-use standings::GpResults;
+use schedule::Schedule;
+
+use standings::driver_standings::DriverStandings;
+use standings::team_standings::TeamStandings;
 
 fn main() {
     if let Err(err) = run() {
@@ -30,7 +32,7 @@ fn run() -> Result<()> {
             "list" => {
                 let mut output = String::new();
 
-                for (idx, race) in Races::race_schedule(false)?.races.iter().enumerate() {
+                for (idx, race) in Schedule::race_schedule(false)?.iter().enumerate() {
                     race.pp_race_title(&mut output, curr_dt, idx + 1)?;
                 }
                 println!("{output}");
@@ -43,7 +45,7 @@ fn run() -> Result<()> {
                 };
                 let mut output = String::new();
 
-                for race in Races::race_schedule(false)?.races {
+                for race in Schedule::race_schedule(false)? {
                     if curr_dt < race.gp_start_dt() {
                         race.pp_race_schedule(&mut output)?;
                         num_to_show -= 1;
@@ -52,19 +54,23 @@ fn run() -> Result<()> {
                         }
                     }
                 }
-                println!("{output}");
+                if output.is_empty() {
+                    eprintln!("No more Grand Prix races scheduled");
+                } else {
+                    println!("{output}");
+                }
             }
             "drivers" => {
                 println!("DRIVER STANDINGS:");
                 println!("-----------------");
-                for driver in GpResults::Driver.get_standings(false)? {
+                for driver in DriverStandings::standings(false)? {
                     println!("{:<20} {}", driver.name, driver.points)
                 }
             }
             "teams" => {
                 println!("TEAM STANDINGS:");
                 println!("---------------");
-                for team in GpResults::Team.get_standings(false)? {
+                for team in TeamStandings::standings(false)? {
                     println!("{:<30} {}", team.name, team.points)
                 }
             }
@@ -87,9 +93,9 @@ fn run() -> Result<()> {
                 };
             }
             "pull" => {
-                Races::race_schedule(true)?;
-                GpResults::Driver.get_standings(true)?;
-                GpResults::Team.get_standings(true)?;
+                Schedule::race_schedule(true)?;
+                TeamStandings::standings(true)?;
+                DriverStandings::standings(true)?;
                 CompletedRace::get_completed_results(true)?;
             }
             "help" => {
@@ -121,6 +127,6 @@ fn run() -> Result<()> {
     } else {
         eprintln!("Not a valid command. Run `f1gp help` for possible commands")
     }
-    Ok(())
     // println!("{}", now.elapsed().as_millis());
+    Ok(())
 }

@@ -1,10 +1,9 @@
 use scraper::Selector;
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
-use std::fs;
 
 use crate::error::{Error, Result};
-use crate::utils::{get_or_create_tmp_dir, PositionInfo};
+use crate::utils::{DataFetcher, PositionInfo};
 
 const BASE_URL: &str = "https://www.formula1.com";
 const RACE_RESULTS: &str = "en/results.html/2024/races.html";
@@ -52,7 +51,7 @@ fn parse_all_results_page(html: String) -> Result<Vec<CompletedRace>> {
             .attr("href")
             .ok_or_else(|| Error::ParseRaceResults)?;
         let gp_name = td_link.text().collect::<Vec<_>>()[1].trim().to_owned();
-        let results = fetch_parse_individual_race(&gp_name, link, &sltrs)?;
+        let results = fetch_parse_individual_race(link, &sltrs)?;
         all_results.push(CompletedRace {
             round: idx + 1,
             gp_name,
@@ -63,12 +62,7 @@ fn parse_all_results_page(html: String) -> Result<Vec<CompletedRace>> {
     Ok(all_results)
 }
 
-fn fetch_parse_individual_race(
-    name: &str,
-    href: &str,
-    selectors: &CssSelectors,
-) -> Result<Vec<PositionInfo>> {
-    println!("Fetching data for race {}", name);
+fn fetch_parse_individual_race(href: &str, selectors: &CssSelectors) -> Result<Vec<PositionInfo>> {
     let body = fetch_data(&format!("{}/{}", BASE_URL, href))?;
     let document = scraper::Html::parse_document(&body);
     let table_body = document.select(&selectors.table_selector);
@@ -135,22 +129,30 @@ pub struct CompletedRace {
     results: Vec<PositionInfo>,
 }
 
+impl DataFetcher for CompletedRace {
+    type A = Vec<CompletedRace>;
+
+    fn cache_file_name() -> String {
+        "2024_race_results.json".to_owned()
+    }
+
+    fn resource_url() -> String {
+        println!("Fetching data for completed Grand Prix");
+        format!("{}/{}", BASE_URL, RACE_RESULTS)
+    }
+
+    fn process_data(raw_data: String) -> Result<Self::A> {
+        parse_all_results_page(raw_data)
+    }
+}
+
 impl CompletedRace {
     pub fn get_completed_results(force_save: bool) -> Result<Vec<CompletedRace>> {
-        let tmp_dir = get_or_create_tmp_dir()?;
-        let results_file = tmp_dir.join("2024_race_results.json");
-        if !results_file.exists() || force_save {
-            let url = format!("{}/{}", BASE_URL, RACE_RESULTS);
-            println!("Fetching data for # of races completed");
-            let raw_data = fetch_data(&url)?;
-            let parsed_data = parse_all_results_page(raw_data)?;
-            let json_data_to_cache = serde_json::to_string(&parsed_data)?;
-            fs::write(results_file, json_data_to_cache)?;
-            Ok(parsed_data)
+        let results = Self::get_data(force_save)?;
+        if !results.is_empty() {
+            Ok(results)
         } else {
-            let data = fs::read_to_string(results_file)?;
-            let standings: Vec<CompletedRace> = serde_json::from_str(&data)?;
-            Ok(standings)
+            Err(Error::NoResults)
         }
     }
 

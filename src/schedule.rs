@@ -1,10 +1,9 @@
 use chrono::{DateTime, Local};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fmt::Write;
-use std::fs;
 
 use crate::error::Result;
-use crate::utils::get_or_create_tmp_dir;
+use crate::utils::DataFetcher;
 
 // for date time formatting
 pub const STR_FMT: &str = "%a %d/%m/%Y %H:%M";
@@ -63,7 +62,7 @@ fn time_until_next_session(sessions: [&DateTime<Local>; 5], curr_dt: DateTime<Lo
     output
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 struct NormalWeekend {
     fp1: DateTime<Local>,
     fp2: DateTime<Local>,
@@ -110,7 +109,7 @@ impl NormalWeekend {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[allow(non_snake_case)]
 struct SprintWeekend {
     fp1: DateTime<Local>,
@@ -170,7 +169,7 @@ impl SprintWeekend {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(untagged)]
 enum Sessions {
     Normal(NormalWeekend),
@@ -200,13 +199,13 @@ impl Sessions {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct GP {
+#[derive(Deserialize, Serialize, Debug)]
+pub struct GrandPrix {
     name: String,
     location: String,
     sessions: Sessions,
 }
-impl GP {
+impl GrandPrix {
     pub fn pp_race_title(
         &self,
         output: &mut String,
@@ -254,29 +253,31 @@ impl GP {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Races {
-    pub races: Vec<GP>,
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Schedule {
+    races: Vec<GrandPrix>,
 }
-impl Races {
-    fn get_data_from_github() -> Result<String> {
-        println!("Fetching schedule");
-        let body: String = ureq::get(SCHEDULE).call()?.into_string()?;
-        Ok(body)
+
+impl DataFetcher for Schedule {
+    type A = Self;
+
+    fn cache_file_name() -> String {
+        "2024_schedule.json".to_owned()
     }
 
-    pub fn race_schedule(force_save: bool) -> Result<Races> {
-        let tmp_dir = get_or_create_tmp_dir()?;
-        let schedule_file = tmp_dir.join("2024_schedule.json");
-        if !schedule_file.exists() || force_save {
-            let raw_data = Self::get_data_from_github()?;
-            fs::write(schedule_file, &raw_data)?;
-            let races: Races = serde_json::from_str(&raw_data)?;
-            Ok(races)
-        } else {
-            let data = fs::read_to_string(schedule_file)?;
-            let races: Races = serde_json::from_str(&data)?;
-            Ok(races)
-        }
+    fn resource_url() -> String {
+        println!("Fetching schedule");
+        SCHEDULE.to_owned()
+    }
+
+    fn process_data(raw_data: String) -> Result<Self::A> {
+        let data: Self::A = serde_json::from_str(&raw_data)?;
+        Ok(data)
+    }
+}
+
+impl Schedule {
+    pub fn race_schedule(force_save: bool) -> Result<Vec<GrandPrix>> {
+        Ok(Self::get_data(force_save)?.races)
     }
 }
