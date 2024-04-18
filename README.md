@@ -8,7 +8,7 @@ Get all Grand Prix races by using `f1gp list`:\
 ```
 ...
 [x]   3. Australian Grand Prix / Melbourne
-[>]   4. Japanese Grand Prix / Suzuka
+[->   4. Japanese Grand Prix / Suzuka
 [ ]   5. Chinese Grand Prix / Shanghai
 [ ]   6. Miami Grand Prix / Miami
 [ ]   7. Emilia Romagna Grand Prix Grand Prix / Imola
@@ -41,9 +41,9 @@ There are a few more commands & options(see below), try them out
 `[status] #round-number GrandPrix-name / location`. Status symbols are explained below
 
 ```
-x -> GP weekend completed
-> -> GP weekend in current week
-  -> GP weekend in future
+[x] -> GP weekend completed
+[-> -> GP weekend in current week
+[ ] -> GP weekend in future
 ```
 
 `next`: Shows session schedule of next Grand Prix. Also shows time until next session

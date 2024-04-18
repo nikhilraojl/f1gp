@@ -55,8 +55,8 @@ fn time_until_next_session(sessions: [&DateTime<Local>; 5], curr_dt: DateTime<Lo
         output = format!(
             "Next session in: {} days, {} hours, {} minutes",
             y.num_days(),
-            y.num_hours() % (y.num_days() * 24),
-            y.num_minutes() % (y.num_hours() * 60)
+            y.num_hours() % 24,
+            y.num_minutes() % 60
         );
     }
     output
@@ -214,13 +214,13 @@ impl GrandPrix {
     ) -> Result<()> {
         let race_name = format!("{} Grand Prix / {}", self.name, self.location);
         let is_past = if curr_dt > self.sessions.gp_start_dt() {
-            "x"
-        } else if (self.sessions.gp_start_dt() - curr_dt).num_days() < 6 {
-            ">"
+            "[x]"
+        } else if (self.sessions.gp_start_dt() - curr_dt).num_days() < 7 {
+            "[->"
         } else {
-            " "
+            "[ ]"
         };
-        writeln!(output, "[{}]  {:>2}. {}", is_past, round, race_name)?;
+        writeln!(output, "{}  {:>2}. {}", is_past, round, race_name)?;
         Ok(())
     }
 
