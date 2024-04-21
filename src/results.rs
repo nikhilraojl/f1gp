@@ -1,6 +1,7 @@
 use scraper::Selector;
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
+use std::path::Path;
 
 use crate::error::{Error, Result};
 use crate::utils::{DataFetcher, PositionInfo};
@@ -19,7 +20,7 @@ struct CssSelectors {
     span_selector: Selector,
 }
 
-fn parse_all_results_page(html: String) -> Result<Vec<CompletedRace>> {
+fn parse_all_results_page(html: String, all_results: &mut Vec<CompletedRace>) -> Result<()> {
     let document = scraper::Html::parse_document(&html);
     // constructing all selectors
     let table_selector = scraper::Selector::parse("table.resultsarchive-table > tbody > tr")
@@ -36,8 +37,13 @@ fn parse_all_results_page(html: String) -> Result<Vec<CompletedRace>> {
 
     let table_body = document.select(&sltrs.table_selector);
 
-    let mut all_results: Vec<CompletedRace> = Vec::new();
     for (idx, element) in table_body.enumerate() {
+        if idx < all_results.len() {
+            // why? We don't want to refetch results for Grand Prix already in cache
+            // If cached data is corrupted clean cache and refetch
+            continue;
+        }
+
         let mut iter = element.select(&sltrs.td_selector);
         // useless
         iter.next();
@@ -51,19 +57,21 @@ fn parse_all_results_page(html: String) -> Result<Vec<CompletedRace>> {
             .attr("href")
             .ok_or_else(|| Error::ParseRaceResults)?;
         let gp_name = td_link.text().collect::<Vec<_>>()[1].trim().to_owned();
-        let results = fetch_parse_individual_race(link, &sltrs)?;
+        let gp_result = fetch_parse_individual_race(link, &sltrs)?;
         all_results.push(CompletedRace {
             round: idx + 1,
             gp_name,
-            results,
+            results: gp_result,
         })
     }
 
-    Ok(all_results)
+    Ok(())
 }
 
 fn fetch_parse_individual_race(href: &str, selectors: &CssSelectors) -> Result<Vec<PositionInfo>> {
-    let body = fetch_data(&format!("{}/{}", BASE_URL, href))?;
+    let url = format!("{}/{}", BASE_URL, href);
+    println!("Fetching Grand Prix data rom {}", &url);
+    let body = fetch_data(&url)?;
     let document = scraper::Html::parse_document(&body);
     let table_body = document.select(&selectors.table_selector);
 
@@ -137,12 +145,18 @@ impl DataFetcher for CompletedRace {
     }
 
     fn resource_url() -> String {
-        println!("Fetching data for completed Grand Prix");
+        println!("Fetching data for all completed Grand Prix");
         format!("{}/{}", BASE_URL, RACE_RESULTS)
     }
 
-    fn process_data(raw_data: String) -> Result<Self::A> {
-        parse_all_results_page(raw_data)
+    fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A> {
+        let mut all_results: Vec<CompletedRace> = if file_path.exists() {
+            Self::read_from_cache(file_path).unwrap_or(Vec::new())
+        } else {
+            Vec::new()
+        };
+        parse_all_results_page(raw_data, &mut all_results)?;
+        Ok(all_results)
     }
 }
 

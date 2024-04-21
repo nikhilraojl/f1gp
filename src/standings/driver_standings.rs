@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use scraper::{selectable::Selectable, ElementRef};
 
 use super::{parse_standings_html_table, BASE_URL};
@@ -72,7 +74,7 @@ impl DataFetcher for DriverStandings {
         format!("{}/{}", BASE_URL, DRIVER_STANDINGS)
     }
 
-    fn process_data(raw_data: String) -> Result<Self::A> {
+    fn process_data(raw_data: String, _file_path: &Path) -> Result<Self::A> {
         parse_standings_html_table(&raw_data, &parse_driver_table_row)
     }
 }

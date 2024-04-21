@@ -6,7 +6,7 @@ mod utils;
 
 use chrono::Local;
 
-use error::Result;
+use error::{Error, Result};
 use results::CompletedRace;
 use schedule::Schedule;
 
@@ -60,6 +60,34 @@ fn run() -> Result<()> {
                     println!("{output}");
                 }
             }
+            "schedule" => {
+                let round_number: u8 = if let Some(arg) = args.next() {
+                    arg.parse()?
+                } else {
+                    0
+                };
+                let mut output = String::new();
+
+                if round_number == 0 {
+                    for race in Schedule::race_schedule(false)? {
+                        race.pp_race_schedule(&mut output)?;
+                        output.push('\n');
+                    }
+                } else {
+                    let schedule = Schedule::race_schedule(false)?;
+
+                    let gp_race = schedule
+                        .get(round_number as usize - 1)
+                        .ok_or(Error::InvalidArgs)?;
+                    gp_race.pp_race_schedule(&mut output)?;
+                }
+
+                if output.is_empty() {
+                    eprintln!("No more Grand Prix races scheduled");
+                } else {
+                    println!("{output}");
+                }
+            }
             "drivers" => {
                 println!("DRIVER STANDINGS:");
                 println!("-----------------");
@@ -97,6 +125,10 @@ fn run() -> Result<()> {
                 TeamStandings::standings(true)?;
                 DriverStandings::standings(true)?;
                 CompletedRace::get_completed_results(true)?;
+            }
+            "clean" => {
+                // TODO: cleanup data in tmp dir cleanup
+                println!("WIP")
             }
             "help" => {
                 println!(

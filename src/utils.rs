@@ -19,7 +19,7 @@ pub trait DataFetcher {
 
     fn cache_file_name() -> String;
     fn resource_url() -> String;
-    fn process_data(raw_data: String) -> Result<Self::A>;
+    fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A>;
 
     fn get_or_create_tmp_dir() -> Result<PathBuf> {
         let tmp_dir = std::env::temp_dir().join(TMP_DIR_NAME);
@@ -55,18 +55,23 @@ pub trait DataFetcher {
         Ok(Self::A::deserialize(&mut schedule)?)
     }
 
+    fn get_cache_file_path() -> Result<PathBuf> {
+        let tmp_dir = Self::get_or_create_tmp_dir()?;
+        let file_name = Self::cache_file_name();
+        let file_path = tmp_dir.join(file_name);
+        Ok(file_path)
+    }
+
     fn get_data(force_save: bool) -> Result<Self::A>
     where
         Self: Sized,
         Self::A: DeserializeOwned,
         Self::A: Serialize,
     {
-        let tmp_dir = Self::get_or_create_tmp_dir()?;
-        let file_name = Self::cache_file_name();
-        let file_path = tmp_dir.join(file_name);
+        let file_path = Self::get_cache_file_path()?;
         if !file_path.exists() || force_save {
             let raw_data = Self::fetch_internet_resource()?;
-            let data = Self::process_data(raw_data)?;
+            let data = Self::process_data(raw_data, &file_path)?;
             Self::cache_and_return_data(data, &file_path)
         } else {
             Self::read_from_cache(&file_path)

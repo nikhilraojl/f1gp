@@ -1,6 +1,7 @@
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
+use std::path::Path;
 
 use crate::error::Result;
 use crate::utils::DataFetcher;
@@ -245,7 +246,9 @@ impl GrandPrix {
 
         // time until next session
         let until_next = self.sessions.pp_time_until_next_session();
-        writeln!(output, "{}", until_next)?;
+        if !until_next.is_empty() {
+            writeln!(output, "{}", until_next)?;
+        }
         Ok(())
     }
     pub fn gp_start_dt(&self) -> DateTime<Local> {
@@ -270,7 +273,7 @@ impl DataFetcher for Schedule {
         SCHEDULE.to_owned()
     }
 
-    fn process_data(raw_data: String) -> Result<Self::A> {
+    fn process_data(raw_data: String, _file_path: &Path) -> Result<Self::A> {
         let data: Self::A = serde_json::from_str(&raw_data)?;
         Ok(data)
     }
