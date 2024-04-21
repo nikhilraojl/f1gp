@@ -70,7 +70,7 @@ fn parse_all_results_page(html: String, all_results: &mut Vec<CompletedRace>) ->
 
 fn fetch_parse_individual_race(href: &str, selectors: &CssSelectors) -> Result<Vec<PositionInfo>> {
     let url = format!("{}/{}", BASE_URL, href);
-    println!("Fetching Grand Prix data rom {}", &url);
+    println!("Fetching Grand Prix data from {}", &url);
     let body = fetch_data(&url)?;
     let document = scraper::Html::parse_document(&body);
     let table_body = document.select(&selectors.table_selector);

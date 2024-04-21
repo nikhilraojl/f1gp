@@ -5,13 +5,14 @@ mod standings;
 mod utils;
 
 use chrono::Local;
+use std::fs::{read_dir, remove_file};
 
 use error::{Error, Result};
 use results::CompletedRace;
 use schedule::Schedule;
-
 use standings::driver_standings::DriverStandings;
 use standings::team_standings::TeamStandings;
+use utils::TMP_DIR_NAME;
 
 fn main() {
     if let Err(err) = run() {
@@ -127,30 +128,46 @@ fn run() -> Result<()> {
                 CompletedRace::get_completed_results(true)?;
             }
             "clean" => {
-                // TODO: cleanup data in tmp dir cleanup
-                println!("WIP")
+                let dry_run = match args.next() {
+                    Some(arg) => arg.as_str() == "--dry-run",
+                    None => false,
+                };
+                if dry_run {
+                    println!("DRY RUN:");
+                    println!("--------");
+                }
+                let tmp_dir = std::env::temp_dir().join(TMP_DIR_NAME);
+                for entry in read_dir(tmp_dir)? {
+                    let entry = entry?;
+                    println!("Removing {:?}", entry.file_name());
+                    if !dry_run {
+                        remove_file(entry.path())?;
+                    }
+                }
             }
             "help" => {
                 println!(
-                    "{:<10}: Shows all Grand Prix Races for current calendar year",
+                    "{:<16}: Shows all Grand Prix Races for current calendar year",
                     "list"
                 );
-                println!("{:<10}: Shows session schedule of next Grand Prix. Also shows time until next session", "next");
+                println!("{:<16}: Shows session schedule of next Grand Prix. Also shows time until next session", "next");
                 println!(
-                    "{:<10}: Shows session schedule for next #num of Grand Prix Races",
+                    "{:<16}: Shows session schedule for next #num of Grand Prix Races",
                     "next <#>"
                 );
-                println!("{:<10}: Shows current driver standings", "drivers");
-                println!("{:<10}: Shows current team/constructor standings", "teams");
-                println!("{:<10}: Shows last Grand Prix race result", "result");
+                println!("{:<16}: Shows current driver standings", "drivers");
+                println!("{:<16}: Shows current team/constructor standings", "teams");
+                println!("{:<16}: Shows last Grand Prix race result", "result");
                 println!(
-                    "{:<10}: Shows results of the requested Grand Prix race(#round)",
+                    "{:<16}: Shows results of the requested Grand Prix race(#round)",
                     "result <#>"
                 );
                 println!(
-                    "{:<10}: Pull latest data from sources. Required for updated standings",
+                    "{:<16}: Pull latest data from sources. Required for updated standings",
                     "pull"
                 );
+                println!("{:<16}: Removes all cached files", "clean");
+                println!("{:<16}: Shows files which will be deleted", "clean --dry-run");
             }
             _ => {
                 eprintln!("Not a valid command. Run `f1gp help` for possible commands")

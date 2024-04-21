@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::error::Result;
 
-const TMP_DIR_NAME: &str = "f1_schedule_standings";
+pub const TMP_DIR_NAME: &str = "f1_schedule_standings";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PositionInfo {

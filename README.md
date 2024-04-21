@@ -37,6 +37,8 @@ There are a few more commands & options(see below), try them out
 
 **Options**
 
+`help`: Shows all possible commands
+
 `list`: Shows all Grand Prix races for current calendar year. The list will be in the layout\
 `[status] #round-number GrandPrix-name / location`. Status symbols are explained below
 
@@ -72,8 +74,10 @@ _NOTE: `0` position for driver indicates either DNF or DNS_
 - https://www.formula1.com/en/results.html/2024/races.html
 - https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/2024.json
 
-`help`: Shows all possible commands
+`pull`: Pull latest data from sources. Data from all these sources is fetched once and cached for subsequent commands. Do a fresh `f1gp pull` if any data needs to be updated. Below are the sources currently used
 
+`clean`: Removes all cached files. Helpful to clean any invalid cache
+ - `--dry-run`: shows files which will be deleted
 ## Build
 
 - requirements: rustc, cargo(you can have both by installing rustup), neovim
