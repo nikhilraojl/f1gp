@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use scraper::ElementRef;
 
 use super::{parse_standings_html_table, BASE_URL};
@@ -58,7 +60,7 @@ impl DataFetcher for TeamStandings {
         format!("{}/{}", BASE_URL, TEAM_STANDINGS)
     }
 
-    fn process_data(raw_data: String) -> Result<Self::A> {
+    fn process_data(raw_data: String, _file_path: &Path) -> Result<Self::A> {
         parse_standings_html_table(&raw_data, &parse_team_table_row)
     }
 }

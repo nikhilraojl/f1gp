@@ -12,6 +12,7 @@ pub enum Error {
     ParseTeamInfo,
     ParseRaceResults,
     NoResults,
+    InvalidArgs,
 }
 
 impl Display for Error {
@@ -30,6 +31,7 @@ impl Display for Error {
                 fmt,
                 "There are no results for any GP, yet. Try `f1gp pull` to get new data"
             ),
+            Self::InvalidArgs => write!(fmt, "Invalid arguments provided"),
         }
     }
 }
