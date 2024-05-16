@@ -1,7 +1,8 @@
-use scraper::Selector;
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 
 use crate::error::{Error, Result};
 use crate::utils::{DataFetcher, PositionInfo};
@@ -14,37 +15,31 @@ fn fetch_data(url: &str) -> Result<String> {
     Ok(body)
 }
 
-struct CssSelectors {
-    table_selector: Selector,
-    td_selector: Selector,
-    span_selector: Selector,
-}
-
-fn parse_all_results_page(html: String, all_results: &mut Vec<CompletedRace>) -> Result<()> {
+fn parse_all_results_page(
+    html: String,
+    existing_round_results: Vec<usize>,
+) -> Result<Vec<CompletedRace>> {
     let document = scraper::Html::parse_document(&html);
     // constructing all selectors
     let table_selector = scraper::Selector::parse("table.resultsarchive-table > tbody > tr")
         .map_err(|_| Error::Scraper)?;
     let anchor_selector = scraper::Selector::parse("a").map_err(|_| Error::Scraper)?;
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
-    let span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
 
-    let sltrs = CssSelectors {
-        table_selector,
-        td_selector,
-        span_selector,
-    };
+    let table_body = document.select(&table_selector);
 
-    let table_body = document.select(&sltrs.table_selector);
+    let mut join_handles: Vec<JoinHandle<Result<()>>> = Vec::new();
+    let output_data = Arc::new(Mutex::new(Vec::new()));
 
     for (idx, element) in table_body.enumerate() {
-        if idx < all_results.len() {
+        let output_arc_clone = output_data.clone();
+        if existing_round_results.contains(&(idx + 1)) {
             // why? We don't want to refetch results for Grand Prix already in cache
             // If cached data is corrupted clean cache and refetch
             continue;
         }
 
-        let mut iter = element.select(&sltrs.td_selector);
+        let mut iter = element.select(&td_selector);
         // useless
         iter.next();
 
@@ -55,29 +50,49 @@ fn parse_all_results_page(html: String, all_results: &mut Vec<CompletedRace>) ->
             .ok_or_else(|| Error::ParseRaceResults)?
             .value()
             .attr("href")
-            .ok_or_else(|| Error::ParseRaceResults)?;
+            .ok_or_else(|| Error::ParseRaceResults)?
+            .to_owned();
         let gp_name = td_link.text().collect::<Vec<_>>()[1].trim().to_owned();
-        let gp_result = fetch_parse_individual_race(link, &sltrs)?;
-        all_results.push(CompletedRace {
-            round: idx + 1,
-            gp_name,
-            results: gp_result,
-        })
+        let handle = std::thread::spawn(move || {
+            let url = format!("{}/{}", BASE_URL, link);
+            println!("Fetching Grand Prix data from {}", &url);
+            let body = fetch_data(&url)?;
+            let gp_result = fetch_parse_individual_race(body)?;
+            let mut guraded_data = output_arc_clone
+                .lock()
+                .map_err(|_| Error::ParseRaceResults)?;
+            guraded_data.push(CompletedRace {
+                round: idx + 1,
+                gp_name,
+                results: gp_result,
+            });
+            Ok(())
+        });
+        join_handles.push(handle);
     }
 
-    Ok(())
+    for h in join_handles.into_iter() {
+        let _ = h.join().map_err(|_| Error::ParseRaceResults)?;
+    }
+
+    let lock = Arc::into_inner(output_data).ok_or(Error::ParseRaceResults)?;
+    let mut output_data = lock.into_inner().map_err(|_| Error::ParseRaceResults)?;
+    output_data.sort_by(|a, b| a.round.cmp(&b.round));
+    Ok(output_data)
 }
 
-fn fetch_parse_individual_race(href: &str, selectors: &CssSelectors) -> Result<Vec<PositionInfo>> {
-    let url = format!("{}/{}", BASE_URL, href);
-    println!("Fetching Grand Prix data from {}", &url);
-    let body = fetch_data(&url)?;
+fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
+    let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
+    let span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
+    let table_selector = scraper::Selector::parse("table.resultsarchive-table > tbody > tr")
+        .map_err(|_| Error::Scraper)?;
+
     let document = scraper::Html::parse_document(&body);
-    let table_body = document.select(&selectors.table_selector);
+    let table_body = document.select(&table_selector);
 
     let mut race_result: Vec<PositionInfo> = Vec::new();
     for element in table_body {
-        let mut iter = element.select(&selectors.td_selector);
+        let mut iter = element.select(&td_selector);
         // useless
         iter.next();
 
@@ -93,7 +108,7 @@ fn fetch_parse_individual_race(href: &str, selectors: &CssSelectors) -> Result<V
         iter.next();
 
         let driver_name = iter.next().ok_or_else(|| Error::ParseRaceResults)?;
-        let mut span_iter = driver_name.select(&selectors.span_selector);
+        let mut span_iter = driver_name.select(&span_selector);
         let first = span_iter
             .next()
             .ok_or_else(|| Error::ParseRaceResults)?
@@ -155,7 +170,8 @@ impl DataFetcher for CompletedRace {
         } else {
             Vec::new()
         };
-        parse_all_results_page(raw_data, &mut all_results)?;
+        let rounds_cached = all_results.iter().map(|r| r.round).collect::<Vec<usize>>();
+        all_results.extend(parse_all_results_page(raw_data, rounds_cached)?);
         Ok(all_results)
     }
 }
