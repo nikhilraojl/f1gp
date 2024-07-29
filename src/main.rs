@@ -167,7 +167,10 @@ fn run() -> Result<()> {
                     "pull"
                 );
                 println!("{:<16}: Removes all cached files", "clean");
-                println!("{:<16}: Shows files which will be deleted", "clean --dry-run");
+                println!(
+                    "{:<16}: Shows files which will be deleted",
+                    "clean --dry-run"
+                );
             }
             _ => {
                 eprintln!("Not a valid command. Run `f1gp help` for possible commands")
