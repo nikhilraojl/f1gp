@@ -2,20 +2,17 @@ use std::path::Path;
 
 use scraper::{selectable::Selectable, ElementRef};
 
-use super::{parse_standings_html_table, BASE_URL};
+use super::{parse_standings_html_table, STANDINGS_BASE_URL};
 use crate::error::{Error, Result};
 use crate::utils::{DataFetcher, PositionInfo};
 
-const DRIVER_STANDINGS: &str = "2024/drivers.html";
+const DRIVER_STANDINGS_FETCH_URL: &str = "2024/drivers.html";
 
 fn parse_driver_table_row(element: ElementRef) -> Result<PositionInfo> {
-    // Parsing based on current website layout, may need to modify parsing
+    // NOTE: Parsing based on current website layout, may need to modify parsing
     // if layout changes
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
     let mut iter = element.select(&td_selector);
-
-    // skipping an empty <td>
-    iter.next();
 
     // driver position
     let position = iter
@@ -71,7 +68,7 @@ impl DataFetcher for DriverStandings {
 
     fn resource_url() -> String {
         println!("Fetching Driver standings");
-        format!("{}/{}", BASE_URL, DRIVER_STANDINGS)
+        format!("{}/{}", STANDINGS_BASE_URL, DRIVER_STANDINGS_FETCH_URL)
     }
 
     fn process_data(raw_data: String, _file_path: &Path) -> Result<Self::A> {

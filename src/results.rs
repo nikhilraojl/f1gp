@@ -5,10 +5,11 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
 use crate::error::{Error, Result};
-use crate::utils::{DataFetcher, PositionInfo};
+use crate::utils::{DataFetcher, PositionInfo, F1_TABLE_SELECTOR};
 
 const BASE_URL: &str = "https://www.formula1.com";
-const RACE_RESULTS: &str = "en/results.html/2024/races.html";
+const CALENDAR_RACE_RESULTS: &str = "en/results/2024/races";
+const SUB_URL_PER_RACE_RESULT: &str = "en/results/2024";
 
 fn fetch_data(url: &str) -> Result<String> {
     let body: String = ureq::get(url).call()?.into_string()?;
@@ -21,8 +22,7 @@ fn parse_all_results_page(
 ) -> Result<Vec<CompletedRace>> {
     let document = scraper::Html::parse_document(&html);
     // constructing all selectors
-    let table_selector = scraper::Selector::parse("table.resultsarchive-table > tbody > tr")
-        .map_err(|_| Error::Scraper)?;
+    let table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).map_err(|_| Error::Scraper)?;
     let anchor_selector = scraper::Selector::parse("a").map_err(|_| Error::Scraper)?;
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
 
@@ -35,13 +35,12 @@ fn parse_all_results_page(
         let output_arc_clone = output_data.clone();
         if existing_round_results.contains(&(idx + 1)) {
             // why? We don't want to refetch results for Grand Prix already in cache
-            // If cached data is corrupted clean cache and refetch
+            // If cached data is corrupted do f1gp clean and f1gp pull or
+            // remove cached file in `tmp` location.
             continue;
         }
 
         let mut iter = element.select(&td_selector);
-        // useless
-        iter.next();
 
         let td_link = iter.next().ok_or_else(|| Error::ParseRaceResults)?;
         let link = td_link
@@ -52,9 +51,9 @@ fn parse_all_results_page(
             .attr("href")
             .ok_or_else(|| Error::ParseRaceResults)?
             .to_owned();
-        let gp_name = td_link.text().collect::<Vec<_>>()[1].trim().to_owned();
+        let gp_name = td_link.text().collect::<Vec<_>>()[0].trim().to_owned();
         let handle = std::thread::spawn(move || {
-            let url = format!("{}/{}", BASE_URL, link);
+            let url = format!("{}/{}/{}", BASE_URL, SUB_URL_PER_RACE_RESULT, link);
             println!("Fetching Grand Prix data from {}", &url);
             let body = fetch_data(&url)?;
             let gp_result = fetch_parse_individual_race(body)?;
@@ -84,8 +83,7 @@ fn parse_all_results_page(
 fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
     let span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
-    let table_selector = scraper::Selector::parse("table.resultsarchive-table > tbody > tr")
-        .map_err(|_| Error::Scraper)?;
+    let table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).map_err(|_| Error::Scraper)?;
 
     let document = scraper::Html::parse_document(&body);
     let table_body = document.select(&table_selector);
@@ -93,8 +91,6 @@ fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
     let mut race_result: Vec<PositionInfo> = Vec::new();
     for element in table_body {
         let mut iter = element.select(&td_selector);
-        // useless
-        iter.next();
 
         let position = iter
             .next()
@@ -104,7 +100,7 @@ fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
             .parse::<usize>()
             .or_else(|_| Ok::<usize, Error>(0))?;
 
-        // useless
+        // driver number, useless
         iter.next();
 
         let driver_name = iter.next().ok_or_else(|| Error::ParseRaceResults)?;
@@ -161,7 +157,7 @@ impl DataFetcher for CompletedRace {
 
     fn resource_url() -> String {
         println!("Fetching data for all completed Grand Prix");
-        format!("{}/{}", BASE_URL, RACE_RESULTS)
+        format!("{}/{}", BASE_URL, CALENDAR_RACE_RESULTS)
     }
 
     fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A> {
