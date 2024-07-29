@@ -5,6 +5,7 @@ mod standings;
 mod utils;
 
 use chrono::Local;
+use std::cmp::max;
 use std::fs::{read_dir, remove_file};
 
 use error::{Error, Result};
@@ -32,10 +33,19 @@ fn run() -> Result<()> {
         match arg.as_ref() {
             "list" => {
                 let mut output = String::new();
+                let info = "[x] Completed || [-> This weekend || [ ] Pending";
 
+                let mut bottom_border_len: usize = info.len();
                 for (idx, race) in Schedule::race_schedule(false)?.iter().enumerate() {
-                    race.pp_race_title(&mut output, curr_dt, idx + 1)?;
+                    let race_title = race.pp_race_title(curr_dt, idx + 1);
+                    bottom_border_len = max(bottom_border_len, race_title.len());
+                    output.push_str(&race_title);
+                    output.push('\n');
                 }
+                output.push_str(&"-".repeat(bottom_border_len));
+                output.push('\n');
+                output.push_str(info);
+                output.push('\n');
                 println!("{output}");
             }
             "next" => {
