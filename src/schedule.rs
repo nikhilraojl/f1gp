@@ -15,7 +15,7 @@ pub const SCHEDULE: &str = "https://raw.githubusercontent.com/sportstimes/f1/mai
 // str constants
 pub const FP1: &str = "FP 1";
 pub const FP2: &str = "FP 2";
-pub const FP3: &str = "FP 2";
+pub const FP3: &str = "FP 3";
 pub const QUALI: &str = "Quali";
 pub const SPR_QUALI: &str = "Spr Quali";
 pub const SPRINT: &str = "Sprint";
