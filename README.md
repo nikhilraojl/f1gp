@@ -62,10 +62,15 @@ Status symbols in output are explained below
 
 `teams`: Shows current team/constructor standings
 
-`result`: Shows last Grand Prix race result\
-_NOTE: `0` position for driver indicates either DNF or DNS_
+`result`: Shows last Grand Prix race result
 
 `result <#>`: Shows results of the requested Grand Prix race (#round)
+
+`quali`: Shows last Grand Prix qualifying
+
+`quali <#>`: Shows qualifying results of the requested Grand Prix race (#round)
+
+_NOTE: `0` race or quali position for driver indicates either DNF or DNS or DQ_
 
 `pull`: Pull latest data from sources. Data from all these sources is fetched once and cached for subsequent commands. Do a fresh `f1gp pull` if any data needs to be updated. Below are the sources currently used
 
