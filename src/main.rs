@@ -1,4 +1,5 @@
 mod error;
+mod quali;
 mod results;
 mod schedule;
 mod standings;
@@ -9,6 +10,7 @@ use std::cmp::max;
 use std::fs::{read_dir, remove_file};
 
 use error::{Error, Result};
+use quali::CompletedQualifying;
 use results::CompletedRace;
 use schedule::Schedule;
 use standings::driver_standings::DriverStandings;
@@ -113,6 +115,29 @@ fn run() -> Result<()> {
                     println!("{:<30} {}", team.name, team.points)
                 }
             }
+            "quali" => {
+                let mut output = String::new();
+                let completed_quali = CompletedQualifying::get_completed_quali_results(false)?;
+                let round: usize = if let Some(arg) = args.next() {
+                    arg.parse()?
+                } else {
+                    completed_quali.len()
+                };
+
+                if round < 1 || round > 25 {
+                    eprintln!("Invalid round value given {}", round);
+                    return Ok(());
+                }
+                if round > completed_quali.len() {
+                    eprintln!("Round {} does not have any quali results", round);
+                    return Ok(());
+                }
+
+                if let Some(race_result) = completed_quali.get(round - 1) {
+                    race_result.pp_completed_quali_results(&mut output)?;
+                    println!("{output}");
+                };
+            }
             "result" => {
                 let mut output = String::new();
                 let completed_gp = CompletedRace::get_completed_results(false)?;
@@ -122,6 +147,10 @@ fn run() -> Result<()> {
                     completed_gp.len()
                 };
 
+                if round < 1 || round > 25 {
+                    eprintln!("Invalid round value given {}", round);
+                    return Ok(());
+                }
                 if round > completed_gp.len() {
                     eprintln!("Round {} does not have any results", round);
                     return Ok(());
@@ -136,6 +165,7 @@ fn run() -> Result<()> {
                 TeamStandings::standings(true)?;
                 DriverStandings::standings(true)?;
                 CompletedRace::get_completed_results(true)?;
+                CompletedQualifying::get_completed_quali_results(true)?;
             }
             "clean" => {
                 let dry_run = match args.next() {
@@ -171,6 +201,11 @@ fn run() -> Result<()> {
                 println!(
                     "{:<16}: Shows results of the requested Grand Prix race(#round)",
                     "result <#>"
+                );
+                println!("{:<16}: Shows last Grand Prix qualifying result", "quali");
+                println!(
+                    "{:<16}: Shows qualifying results of the requested Grand Prix(#round)",
+                    "quali <#>"
                 );
                 println!(
                     "{:<16}: Pull latest data from sources. Required for updated standings",
