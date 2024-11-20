@@ -3,23 +3,31 @@ use std::fmt::Write;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
+use ureq;
 
 use crate::error::{Error, Result};
-use crate::utils::{DataFetcher, PositionInfo, F1_TABLE_SELECTOR};
+use crate::utils::{DataFetcher, QualiPositionInfo, F1_TABLE_SELECTOR};
 
 const BASE_URL: &str = "https://www.formula1.com";
 const CALENDAR_RACE_RESULTS: &str = "en/results/2024/races";
 const SUB_URL_PER_RACE_RESULT: &str = "en/results/2024";
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CompletedQualifying {
+    round: usize,
+    gp_name: String,
+    results: Vec<QualiPositionInfo>,
+}
 
 fn fetch_data(url: &str) -> Result<String> {
     let body: String = ureq::get(url).call()?.into_string()?;
     Ok(body)
 }
 
-fn parse_all_results_page(
+pub fn parse_qualifying_page(
     html: String,
     existing_round_results: Vec<usize>,
-) -> Result<Vec<CompletedRace>> {
+) -> Result<Vec<CompletedQualifying>> {
     let document = scraper::Html::parse_document(&html);
     // constructing all selectors
     let table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).map_err(|_| Error::Scraper)?;
@@ -53,18 +61,19 @@ fn parse_all_results_page(
             .to_owned();
         let gp_name = td_link.text().collect::<Vec<_>>()[0].trim().to_owned();
         let race_url = format!("{}/{}/{}", BASE_URL, SUB_URL_PER_RACE_RESULT, link);
+        let quali_url = race_url.replace("race-result", "qualifying");
 
         let handle = std::thread::spawn(move || {
-            println!("Fetching Grand Prix data from {}", &race_url);
-            let body = fetch_data(&race_url)?;
-            let gp_result = fetch_parse_individual_race(body)?;
+            println!("Fetching Qualifying data from {}", &quali_url);
+            let body = fetch_data(&quali_url)?;
+            let quali_result = fetch_parse_individual_quali_result(body)?;
             let mut guraded_data = output_arc_clone
                 .lock()
                 .map_err(|_| Error::ParseRaceResults)?;
-            guraded_data.push(CompletedRace {
+            guraded_data.push(CompletedQualifying {
                 round: idx + 1,
                 gp_name,
-                results: gp_result,
+                results: quali_result,
             });
             Ok(())
         });
@@ -81,100 +90,81 @@ fn parse_all_results_page(
     Ok(output_data)
 }
 
-fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
-    let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
-    let span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
-    let table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).map_err(|_| Error::Scraper)?;
+fn fetch_parse_individual_quali_result(document: String) -> Result<Vec<QualiPositionInfo>> {
+    let document = scraper::Html::parse_document(&document);
+    let f1_table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).unwrap();
 
-    let document = scraper::Html::parse_document(&body);
-    let table_body = document.select(&table_selector);
+    let td_selector = scraper::Selector::parse("td").unwrap();
 
-    let mut race_result: Vec<PositionInfo> = Vec::new();
-    for element in table_body {
-        let mut iter = element.select(&td_selector);
+    let doc_iter = document.select(&f1_table_selector);
 
-        let position = iter
-            .next()
-            .ok_or_else(|| Error::ParseRaceResults)?
-            .text()
-            .collect::<Vec<_>>()[0]
+    let mut output = Vec::new();
+
+    for element in doc_iter {
+        let mut element_iter = element.select(&td_selector);
+
+        let position = element_iter.next().unwrap().text().collect::<Vec<_>>()[0]
             .parse::<usize>()
-            .or_else(|_| Ok::<usize, Error>(0))?;
+            .unwrap_or(0);
 
-        // driver number, useless
-        iter.next();
+        // skip car number
+        element_iter.next();
 
-        let driver_name = iter.next().ok_or_else(|| Error::ParseRaceResults)?;
-        let mut span_iter = driver_name.select(&span_selector);
-        let first = span_iter
-            .next()
-            .ok_or_else(|| Error::ParseRaceResults)?
-            .text()
-            .collect::<Vec<_>>()[0];
-        let second = span_iter
-            .next()
-            .ok_or_else(|| Error::ParseRaceResults)?
-            .text()
-            .collect::<Vec<_>>()[0];
-        let name = format!("{} {}", first, second);
+        let full_name = element_iter.next().unwrap().text().collect::<Vec<_>>();
+        let mut name = full_name[0].to_owned();
+        name.push(' ');
+        name.push_str(full_name[2]);
 
-        // useless
-        iter.next();
-        iter.next();
-        iter.next();
+        // skip team name
+        element_iter.next();
 
-        // points
-        let points = iter
-            .next()
-            .ok_or(Error::ParseRaceResults)?
-            .text()
-            .collect::<Vec<_>>()[0]
-            .parse::<usize>()?;
+        let q = element_iter.next().unwrap().text().collect::<Vec<_>>();
+        let q1 = q.get(0).map(|s| s.to_owned().to_owned());
 
-        let res = PositionInfo {
+        let q = element_iter.next().unwrap().text().collect::<Vec<_>>();
+        let q2 = q.get(0).map(|s| s.to_owned().to_owned());
+
+        let q = element_iter.next().unwrap().text().collect::<Vec<_>>();
+        let q3 = q.get(0).map(|s| s.to_owned().to_owned());
+
+        let quali_result = QualiPositionInfo {
             position,
             name,
-            points,
+            q1,
+            q2,
+            q3,
         };
-        race_result.push(res);
+        output.push(quali_result);
     }
-
-    Ok(race_result)
+    Ok(output)
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct CompletedRace {
-    round: usize,
-    gp_name: String,
-    results: Vec<PositionInfo>,
-}
-
-impl DataFetcher for CompletedRace {
-    type A = Vec<CompletedRace>;
+impl DataFetcher for CompletedQualifying {
+    type A = Vec<CompletedQualifying>;
 
     fn cache_file_name() -> String {
-        "2024_race_results.json".to_owned()
+        "2024_quali_results.json".to_owned()
     }
 
     fn resource_url() -> String {
-        println!("Fetching data for all completed Grand Prix");
+        println!("Fetching data for all completed Qualifying Prix");
         format!("{}/{}", BASE_URL, CALENDAR_RACE_RESULTS)
     }
 
     fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A> {
-        let mut all_results: Vec<CompletedRace> = if file_path.exists() {
+        let mut all_results: Vec<CompletedQualifying> = if file_path.exists() {
             Self::read_from_cache(file_path).unwrap_or(Vec::new())
         } else {
             Vec::new()
         };
         let rounds_cached = all_results.iter().map(|r| r.round).collect::<Vec<usize>>();
-        all_results.extend(parse_all_results_page(raw_data, rounds_cached)?);
+        all_results.extend(parse_qualifying_page(raw_data, rounds_cached)?);
         Ok(all_results)
     }
 }
 
-impl CompletedRace {
-    pub fn get_completed_results(force_save: bool) -> Result<Vec<CompletedRace>> {
+impl CompletedQualifying {
+    pub fn get_completed_quali_results(force_save: bool) -> Result<Vec<CompletedQualifying>> {
         let results = Self::get_data(force_save)?;
         if !results.is_empty() {
             Ok(results)
@@ -183,15 +173,23 @@ impl CompletedRace {
         }
     }
 
-    pub fn pp_completed_race_results(&self, output: &mut String) -> Result<()> {
+    pub fn pp_completed_quali_results(&self, output: &mut String) -> Result<()> {
         writeln!(output, "{}", "-".repeat(self.gp_name.len()))?;
         writeln!(output, "{}", self.gp_name)?;
         writeln!(output, "{}", "-".repeat(self.gp_name.len()))?;
+        writeln!(
+            output,
+            "{:<3} {:<20} {:^8} | {:^8} | {:^8}",
+            "", "", "Q1", "Q2", "Q3"
+        )?;
         for driver in &self.results {
+            let d_q1 = driver.q1.clone().unwrap_or("".to_owned());
+            let d_q2 = driver.q2.clone().unwrap_or("".to_owned());
+            let d_q3 = driver.q3.clone().unwrap_or("".to_owned());
             writeln!(
                 output,
-                "{:<3} {:<20} {}",
-                driver.position, driver.name, driver.points
+                "{:<3} {:<20} {:<8} | {:<8} | {:<8}",
+                driver.position, driver.name, d_q1, d_q2, d_q3
             )?;
         }
         Ok(())

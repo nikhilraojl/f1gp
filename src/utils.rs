@@ -15,6 +15,15 @@ pub struct PositionInfo {
     pub points: usize,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct QualiPositionInfo {
+    pub position: usize,
+    pub name: String,
+    pub q1: Option<String>,
+    pub q2: Option<String>,
+    pub q3: Option<String>,
+}
+
 pub trait DataFetcher {
     type A;
 
