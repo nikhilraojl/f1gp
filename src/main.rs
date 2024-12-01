@@ -51,11 +51,7 @@ fn run() -> Result<()> {
                 println!("{output}");
             }
             "next" => {
-                let mut num_to_show: u8 = if let Some(arg) = args.next() {
-                    arg.parse()?
-                } else {
-                    1
-                };
+                let mut num_to_show: u8 = args.next().unwrap_or("1".to_owned()).parse()?;
                 let mut output = String::new();
 
                 for race in Schedule::race_schedule(false)? {
@@ -74,11 +70,7 @@ fn run() -> Result<()> {
                 }
             }
             "schedule" => {
-                let round_number: u8 = if let Some(arg) = args.next() {
-                    arg.parse()?
-                } else {
-                    0
-                };
+                let round_number: u8 = args.next().unwrap_or("0".to_owned()).parse()?;
                 let mut output = String::new();
 
                 if round_number == 0 {
