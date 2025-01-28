@@ -6,10 +6,9 @@ use std::thread::JoinHandle;
 
 use crate::error::{Error, Result};
 use crate::utils::{DataFetcher, PositionInfo, F1_TABLE_SELECTOR};
+use crate::CURR_YEAR;
 
 const BASE_URL: &str = "https://www.formula1.com";
-const CALENDAR_RACE_RESULTS: &str = "en/results/2024/races";
-const SUB_URL_PER_RACE_RESULT: &str = "en/results/2024";
 
 fn fetch_data(url: &str) -> Result<String> {
     let body: String = ureq::get(url).call()?.into_string()?;
@@ -21,10 +20,14 @@ fn parse_all_results_page(
     existing_round_results: Vec<usize>,
 ) -> Result<Vec<CompletedRace>> {
     let document = scraper::Html::parse_document(&html);
+
     // constructing all selectors
     let table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).map_err(|_| Error::Scraper)?;
     let anchor_selector = scraper::Selector::parse("a").map_err(|_| Error::Scraper)?;
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
+
+    // initiating sub URL
+    let sub_url_per_race_result = format!("en/results/{}", *CURR_YEAR);
 
     let table_body = document.select(&table_selector);
 
@@ -52,7 +55,7 @@ fn parse_all_results_page(
             .ok_or_else(|| Error::ParseRaceResults)?
             .to_owned();
         let gp_name = td_link.text().collect::<Vec<_>>()[0].trim().to_owned();
-        let race_url = format!("{}/{}/{}", BASE_URL, SUB_URL_PER_RACE_RESULT, link);
+        let race_url = format!("{}/{}/{}", BASE_URL, sub_url_per_race_result, link);
 
         let handle = std::thread::spawn(move || {
             println!("Fetching Grand Prix data from {}", &race_url);
@@ -153,12 +156,13 @@ impl DataFetcher for CompletedRace {
     type A = Vec<CompletedRace>;
 
     fn cache_file_name() -> String {
-        "2024_race_results.json".to_owned()
+        format!("{}_race_results.json", *CURR_YEAR)
     }
 
     fn resource_url() -> String {
         println!("Fetching data for all completed Grand Prix");
-        format!("{}/{}", BASE_URL, CALENDAR_RACE_RESULTS)
+        let calendar_race_results = format!("en/results/{}/races", *CURR_YEAR);
+        format!("{}/{}", BASE_URL, calendar_race_results)
     }
 
     fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A> {
@@ -174,15 +178,6 @@ impl DataFetcher for CompletedRace {
 }
 
 impl CompletedRace {
-    pub fn get_completed_results(force_save: bool) -> Result<Vec<CompletedRace>> {
-        let results = Self::get_data(force_save)?;
-        if !results.is_empty() {
-            Ok(results)
-        } else {
-            Err(Error::NoResults)
-        }
-    }
-
     pub fn pp_completed_race_results(&self, output: &mut String) -> Result<()> {
         writeln!(output, "{}", "-".repeat(self.gp_name.len()))?;
         writeln!(output, "{}", self.gp_name)?;

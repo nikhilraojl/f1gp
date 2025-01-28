@@ -5,9 +5,10 @@ mod schedule;
 mod standings;
 mod utils;
 
-use chrono::Local;
+use chrono::{Datelike, Local};
 use std::cmp::max;
 use std::fs::{read_dir, remove_file};
+use std::sync::LazyLock;
 
 use error::{Error, Result};
 use quali::CompletedQualifying;
@@ -15,7 +16,9 @@ use results::CompletedRace;
 use schedule::Schedule;
 use standings::driver_standings::DriverStandings;
 use standings::team_standings::TeamStandings;
-use utils::TMP_DIR_NAME;
+use utils::{DataFetcher, TMP_DIR_NAME};
+
+static CURR_YEAR: LazyLock<i32> = LazyLock::new(|| Local::now().year());
 
 fn main() {
     if let Err(err) = run() {
@@ -38,7 +41,7 @@ fn run() -> Result<()> {
                 let info = "[x] Completed || [-> This weekend || [ ] Pending";
 
                 let mut bottom_border_len: usize = info.len();
-                for (idx, race) in Schedule::race_schedule(false)?.iter().enumerate() {
+                for (idx, race) in Schedule::get_data()?.iter().enumerate() {
                     let race_title = race.pp_race_title(curr_dt, idx + 1);
                     bottom_border_len = max(bottom_border_len, race_title.len());
                     output.push_str(&race_title);
@@ -51,14 +54,10 @@ fn run() -> Result<()> {
                 println!("{output}");
             }
             "next" => {
-                let mut num_to_show: u8 = if let Some(arg) = args.next() {
-                    arg.parse()?
-                } else {
-                    1
-                };
+                let mut num_to_show = args.next().unwrap_or("1".to_owned()).parse::<u8>()?;
                 let mut output = String::new();
 
-                for race in Schedule::race_schedule(false)? {
+                for race in Schedule::get_data()? {
                     if curr_dt < race.gp_start_dt() {
                         race.pp_race_schedule(&mut output)?;
                         num_to_show -= 1;
@@ -74,20 +73,16 @@ fn run() -> Result<()> {
                 }
             }
             "schedule" => {
-                let round_number: u8 = if let Some(arg) = args.next() {
-                    arg.parse()?
-                } else {
-                    0
-                };
+                let round_number = args.next().unwrap_or("0".to_owned()).parse::<u8>()?;
                 let mut output = String::new();
 
                 if round_number == 0 {
-                    for race in Schedule::race_schedule(false)? {
+                    for race in Schedule::get_data()? {
                         race.pp_race_schedule(&mut output)?;
                         output.push('\n');
                     }
                 } else {
-                    let schedule = Schedule::race_schedule(false)?;
+                    let schedule = Schedule::get_data()?;
 
                     let gp_race = schedule
                         .get(round_number as usize - 1)
@@ -104,20 +99,20 @@ fn run() -> Result<()> {
             "drivers" => {
                 println!("DRIVER STANDINGS:");
                 println!("-----------------");
-                for driver in DriverStandings::standings(false)? {
+                for driver in DriverStandings::get_data()? {
                     println!("{:<20} {}", driver.name, driver.points)
                 }
             }
             "teams" => {
                 println!("TEAM STANDINGS:");
                 println!("---------------");
-                for team in TeamStandings::standings(false)? {
+                for team in TeamStandings::get_data()? {
                     println!("{:<30} {}", team.name, team.points)
                 }
             }
             "quali" => {
                 let mut output = String::new();
-                let completed_quali = CompletedQualifying::get_completed_quali_results(false)?;
+                let completed_quali = CompletedQualifying::get_data()?;
                 let round: usize = if let Some(arg) = args.next() {
                     arg.parse()?
                 } else {
@@ -140,7 +135,7 @@ fn run() -> Result<()> {
             }
             "result" => {
                 let mut output = String::new();
-                let completed_gp = CompletedRace::get_completed_results(false)?;
+                let completed_gp = CompletedRace::get_data()?;
                 let round: usize = if let Some(arg) = args.next() {
                     arg.parse()?
                 } else {
@@ -161,11 +156,11 @@ fn run() -> Result<()> {
                 };
             }
             "pull" => {
-                Schedule::race_schedule(true)?;
-                TeamStandings::standings(true)?;
-                DriverStandings::standings(true)?;
-                CompletedRace::get_completed_results(true)?;
-                CompletedQualifying::get_completed_quali_results(true)?;
+                Schedule::pull()?;
+                TeamStandings::pull()?;
+                DriverStandings::pull()?;
+                CompletedRace::pull()?;
+                CompletedQualifying::pull()?;
             }
             "clean" => {
                 let dry_run = match args.next() {

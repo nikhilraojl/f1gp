@@ -72,19 +72,44 @@ pub trait DataFetcher {
         Ok(file_path)
     }
 
-    fn get_data(force_save: bool) -> Result<Self::A>
+    // Setting `force_pull` to true will always make a call to
+    // the internet resource.
+    // If `force_pull` is false, it may or may not fetch from internet
+    // resource depending on the existing of local cache
+    // TODO: May be split into read_from_cache & fetch_from_internet
+    // functions and avoid this confusion
+    fn get_data_internal_with_pull(force_pull: bool) -> Result<Self::A>
     where
         Self: Sized,
         Self::A: DeserializeOwned,
         Self::A: Serialize,
     {
         let file_path = Self::get_cache_file_path()?;
-        if !file_path.exists() || force_save {
+        if !file_path.exists() || force_pull {
             let raw_data = Self::fetch_internet_resource()?;
             let data = Self::process_data(raw_data, &file_path)?;
             Self::cache_and_return_data(data, &file_path)
         } else {
             Self::read_from_cache(&file_path)
         }
+    }
+
+    fn get_data() -> Result<Self::A>
+    where
+        Self: Sized,
+        Self::A: DeserializeOwned,
+        Self::A: Serialize,
+    {
+        Self::get_data_internal_with_pull(false)
+    }
+
+    fn pull() -> Result<()>
+    where
+        Self: Sized,
+        Self::A: DeserializeOwned,
+        Self::A: Serialize,
+    {
+        let _ = Self::get_data_internal_with_pull(true)?;
+        Ok(())
     }
 }

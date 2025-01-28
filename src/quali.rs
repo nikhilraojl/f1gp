@@ -3,14 +3,12 @@ use std::fmt::Write;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use ureq;
 
 use crate::error::{Error, Result};
 use crate::utils::{DataFetcher, QualiPositionInfo, F1_TABLE_SELECTOR};
+use crate::CURR_YEAR;
 
 const BASE_URL: &str = "https://www.formula1.com";
-const CALENDAR_RACE_RESULTS: &str = "en/results/2024/races";
-const SUB_URL_PER_RACE_RESULT: &str = "en/results/2024";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CompletedQualifying {
@@ -39,6 +37,8 @@ pub fn parse_qualifying_page(
     let mut join_handles: Vec<JoinHandle<Result<()>>> = Vec::new();
     let output_data = Arc::new(Mutex::new(Vec::new()));
 
+    let sub_url_per_race_result = format!("en/results/{}", *CURR_YEAR);
+
     for (idx, element) in table_body.enumerate() {
         let output_arc_clone = output_data.clone();
         if existing_round_results.contains(&(idx + 1)) {
@@ -60,7 +60,7 @@ pub fn parse_qualifying_page(
             .ok_or_else(|| Error::ParseRaceResults)?
             .to_owned();
         let gp_name = td_link.text().collect::<Vec<_>>()[0].trim().to_owned();
-        let race_url = format!("{}/{}/{}", BASE_URL, SUB_URL_PER_RACE_RESULT, link);
+        let race_url = format!("{}/{}/{}", BASE_URL, sub_url_per_race_result, link);
         let quali_url = race_url.replace("race-result", "qualifying");
 
         let handle = std::thread::spawn(move || {
@@ -119,13 +119,13 @@ fn fetch_parse_individual_quali_result(document: String) -> Result<Vec<QualiPosi
         element_iter.next();
 
         let q = element_iter.next().unwrap().text().collect::<Vec<_>>();
-        let q1 = q.get(0).map(|s| s.to_owned().to_owned());
+        let q1 = q.first().map(|s| s.to_owned().to_owned());
 
         let q = element_iter.next().unwrap().text().collect::<Vec<_>>();
-        let q2 = q.get(0).map(|s| s.to_owned().to_owned());
+        let q2 = q.first().map(|s| s.to_owned().to_owned());
 
         let q = element_iter.next().unwrap().text().collect::<Vec<_>>();
-        let q3 = q.get(0).map(|s| s.to_owned().to_owned());
+        let q3 = q.first().map(|s| s.to_owned().to_owned());
 
         let quali_result = QualiPositionInfo {
             position,
@@ -143,12 +143,13 @@ impl DataFetcher for CompletedQualifying {
     type A = Vec<CompletedQualifying>;
 
     fn cache_file_name() -> String {
-        "2024_quali_results.json".to_owned()
+        format!("{}_quali_results.json", *CURR_YEAR)
     }
 
     fn resource_url() -> String {
         println!("Fetching data for all completed Qualifying Prix");
-        format!("{}/{}", BASE_URL, CALENDAR_RACE_RESULTS)
+        let calendar_race_results = format!("en/results/{}/races", *CURR_YEAR);
+        format!("{}/{}", BASE_URL, calendar_race_results)
     }
 
     fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A> {
@@ -164,15 +165,6 @@ impl DataFetcher for CompletedQualifying {
 }
 
 impl CompletedQualifying {
-    pub fn get_completed_quali_results(force_save: bool) -> Result<Vec<CompletedQualifying>> {
-        let results = Self::get_data(force_save)?;
-        if !results.is_empty() {
-            Ok(results)
-        } else {
-            Err(Error::NoResults)
-        }
-    }
-
     pub fn pp_completed_quali_results(&self, output: &mut String) -> Result<()> {
         writeln!(output, "{}", "-".repeat(self.gp_name.len()))?;
         writeln!(output, "{}", self.gp_name)?;
