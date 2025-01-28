@@ -5,12 +5,10 @@ use std::path::Path;
 
 use crate::error::Result;
 use crate::utils::DataFetcher;
+use crate::CURR_YEAR;
 
 // for date time formatting
 pub const STR_FMT: &str = "%a %d/%m/%Y %H:%M";
-
-// internet resources
-pub const SCHEDULE: &str = "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/2024.json";
 
 // str constants
 pub const FP1: &str = "FP 1";
@@ -256,25 +254,22 @@ pub struct Schedule {
 }
 
 impl DataFetcher for Schedule {
-    type A = Self;
+    type A = Vec<GrandPrix>;
 
     fn cache_file_name() -> String {
-        "2024_schedule.json".to_owned()
+        format!("{}_schedule.json", *CURR_YEAR)
     }
 
     fn resource_url() -> String {
         println!("Fetching schedule");
-        SCHEDULE.to_owned()
+        format!(
+            "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/{}.json",
+            *CURR_YEAR
+        )
     }
 
     fn process_data(raw_data: String, _file_path: &Path) -> Result<Self::A> {
-        let data: Self::A = serde_json::from_str(&raw_data)?;
-        Ok(data)
-    }
-}
-
-impl Schedule {
-    pub fn race_schedule(force_save: bool) -> Result<Vec<GrandPrix>> {
-        Ok(Self::get_data(force_save)?.races)
+        let data: Self = serde_json::from_str(&raw_data)?;
+        Ok(data.races)
     }
 }

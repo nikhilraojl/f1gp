@@ -1,12 +1,15 @@
 use std::path::Path;
+use std::sync::LazyLock;
 
 use scraper::{selectable::Selectable, ElementRef};
 
 use super::{parse_standings_html_table, STANDINGS_BASE_URL};
 use crate::error::{Error, Result};
 use crate::utils::{DataFetcher, PositionInfo};
+use crate::CURR_YEAR;
 
-const DRIVER_STANDINGS_FETCH_URL: &str = "2024/drivers.html";
+static DRIVER_STANDINGS_FETCH_URL: LazyLock<String> =
+    LazyLock::new(|| format!("{}/drivers.html", *CURR_YEAR));
 
 fn parse_driver_table_row(element: ElementRef) -> Result<PositionInfo> {
     // NOTE: Parsing based on current website layout, may need to modify parsing
@@ -63,26 +66,15 @@ impl DataFetcher for DriverStandings {
     type A = Vec<PositionInfo>;
 
     fn cache_file_name() -> String {
-        "2024_driver_standings.json".to_owned()
+        format!("{}_driver_standings.json", *CURR_YEAR)
     }
 
     fn resource_url() -> String {
         println!("Fetching Driver standings");
-        format!("{}/{}", STANDINGS_BASE_URL, DRIVER_STANDINGS_FETCH_URL)
+        format!("{}/{}", STANDINGS_BASE_URL, *DRIVER_STANDINGS_FETCH_URL)
     }
 
     fn process_data(raw_data: String, _file_path: &Path) -> Result<Self::A> {
         parse_standings_html_table(&raw_data, &parse_driver_table_row)
-    }
-}
-
-impl DriverStandings {
-    pub fn standings(force_save: bool) -> Result<Vec<PositionInfo>> {
-        let standings = Self::get_data(force_save)?;
-        if !standings.is_empty() {
-            Ok(standings)
-        } else {
-            Err(Error::NoResults)
-        }
     }
 }
