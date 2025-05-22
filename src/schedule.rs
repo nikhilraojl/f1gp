@@ -196,6 +196,13 @@ impl Sessions {
         }?;
         Ok(())
     }
+
+    fn is_sprint_weekend(&self) -> bool {
+        match self {
+            Self::Normal(_) => false,
+            Self::Sprint(_) => true,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -203,9 +210,10 @@ pub struct GrandPrix {
     name: String,
     location: String,
     sessions: Sessions,
+    round: usize,
 }
 impl GrandPrix {
-    pub fn pp_race_title(&self, curr_dt: DateTime<Local>, round: usize) -> String {
+    pub fn pp_race_title(&self, curr_dt: DateTime<Local>) -> String {
         let race_name = format!("{} Grand Prix / {}", self.name, self.location);
         let is_past = if curr_dt > self.sessions.gp_start_dt() {
             "[x]"
@@ -214,7 +222,11 @@ impl GrandPrix {
         } else {
             "[ ]"
         };
-        format!("{}  {:>2}. {}", is_past, round, race_name)
+        if self.sessions.is_sprint_weekend() {
+            format!("{} SP {:>2}. {}", is_past, self.round, race_name)
+        } else {
+            format!("{}    {:>2}. {}", is_past, self.round, race_name)
+        }
     }
 
     pub fn pp_race_schedule(&self, output: &mut String) -> Result<()> {

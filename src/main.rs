@@ -42,7 +42,7 @@ fn run() -> Result<()> {
 
                 let mut bottom_border_len: usize = info.len();
                 for (idx, race) in Schedule::get_data()?.iter().enumerate() {
-                    let race_title = race.pp_race_title(curr_dt, idx + 1);
+                    let race_title = race.pp_race_title(curr_dt);
                     bottom_border_len = max(bottom_border_len, race_title.len());
                     output.push_str(&race_title);
                     output.push('\n');
@@ -155,12 +155,15 @@ fn run() -> Result<()> {
                     println!("{output}");
                 };
             }
+            "sprint" => {
+                println!("Sprint weekend");
+            }
             "pull" => {
                 Schedule::pull()?;
-                TeamStandings::pull()?;
-                DriverStandings::pull()?;
-                CompletedRace::pull()?;
-                CompletedQualifying::pull()?;
+                // TeamStandings::pull()?;
+                // DriverStandings::pull()?;
+                // CompletedRace::pull()?;
+                // CompletedQualifying::pull()?;
             }
             "clean" => {
                 let dry_run = match args.next() {
