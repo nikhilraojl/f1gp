@@ -1,11 +1,13 @@
 mod error;
 mod quali;
 mod results;
+mod sprint_results;
 mod schedule;
 mod standings;
 mod utils;
 
 use chrono::{Datelike, Local};
+use sprint_results::CompletedSprint;
 use std::cmp::max;
 use std::fs::{read_dir, remove_file};
 use std::sync::LazyLock;
@@ -41,7 +43,7 @@ fn run() -> Result<()> {
                 let info = "[x] Completed || [-> This weekend || [ ] Pending";
 
                 let mut bottom_border_len: usize = info.len();
-                for (idx, race) in Schedule::get_data()?.iter().enumerate() {
+                for race in Schedule::get_data()?.iter() {
                     let race_title = race.pp_race_title(curr_dt);
                     bottom_border_len = max(bottom_border_len, race_title.len());
                     output.push_str(&race_title);
@@ -156,7 +158,8 @@ fn run() -> Result<()> {
                 };
             }
             "sprint" => {
-                println!("Sprint weekend");
+                let _completed_sprint = CompletedSprint::get_data();
+                println!("Sprint weekend fetching done");
             }
             "pull" => {
                 Schedule::pull()?;
