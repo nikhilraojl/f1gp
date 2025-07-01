@@ -8,7 +8,7 @@ pub enum Error {
     Ureq(Box<ureq::Error>),
     ParseInt(std::num::ParseIntError),
     Scraper,
-    ParseDriverInfo,
+    ParseDriverInfo(f32),
     ParseTeamInfo,
     ParseRaceResults,
     // NoResults,
@@ -24,7 +24,9 @@ impl Display for Error {
             Self::Ureq(err) => write!(fmt, "{err}"),
             Self::Scraper => write!(fmt, "HTML parsing failed"),
             Self::ParseInt(err) => write!(fmt, "{err}"),
-            Self::ParseDriverInfo => write!(fmt, "Driver table row parsing failed"),
+            Self::ParseDriverInfo(step) => {
+                write!(fmt, "Driver table row parsing failed. Step: {step}")
+            }
             Self::ParseTeamInfo => write!(fmt, "Team table row parsing failed"),
             Self::ParseRaceResults => write!(fmt, "Race results table parsing failed"),
             // Self::NoResults => write!(

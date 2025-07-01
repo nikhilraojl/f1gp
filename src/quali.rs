@@ -37,8 +37,6 @@ pub fn parse_qualifying_page(
     let mut join_handles: Vec<JoinHandle<Result<()>>> = Vec::new();
     let output_data = Arc::new(Mutex::new(Vec::new()));
 
-    let sub_url_per_race_result = format!("en/results/{}", *CURR_YEAR);
-
     for (idx, element) in table_body.enumerate() {
         let output_arc_clone = output_data.clone();
         if existing_round_results.contains(&(idx + 1)) {
@@ -59,8 +57,8 @@ pub fn parse_qualifying_page(
             .attr("href")
             .ok_or_else(|| Error::ParseRaceResults)?
             .to_owned();
-        let gp_name = td_link.text().collect::<Vec<_>>()[0].trim().to_owned();
-        let race_url = format!("{}/{}/{}", BASE_URL, sub_url_per_race_result, link);
+        let gp_name = td_link.text().collect::<Vec<_>>()[1].trim().to_owned();
+        let race_url = format!("{}/{}", BASE_URL, link);
         let quali_url = race_url.replace("race-result", "qualifying");
 
         let handle = std::thread::spawn(move || {

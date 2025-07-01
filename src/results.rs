@@ -26,9 +26,6 @@ fn parse_all_results_page(
     let anchor_selector = scraper::Selector::parse("a").map_err(|_| Error::Scraper)?;
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
 
-    // initiating sub URL
-    let sub_url_per_race_result = format!("en/results/{}", *CURR_YEAR);
-
     let table_body = document.select(&table_selector);
 
     let mut join_handles: Vec<JoinHandle<Result<()>>> = Vec::new();
@@ -46,16 +43,21 @@ fn parse_all_results_page(
         let mut iter = element.select(&td_selector);
 
         let td_link = iter.next().ok_or_else(|| Error::ParseRaceResults)?;
-        let link = td_link
+        let a_td_link = td_link
             .select(&anchor_selector)
             .next()
-            .ok_or_else(|| Error::ParseRaceResults)?
+            .ok_or_else(|| Error::ParseRaceResults)?;
+
+        let gp_name = a_td_link.text().collect::<Vec<_>>()[1].to_owned();
+
+        let link = a_td_link
             .value()
             .attr("href")
             .ok_or_else(|| Error::ParseRaceResults)?
             .to_owned();
-        let gp_name = td_link.text().collect::<Vec<_>>()[0].trim().to_owned();
-        let race_url = format!("{}/{}/{}", BASE_URL, sub_url_per_race_result, link);
+
+
+        let race_url = format!("{}/{}", BASE_URL, link);
 
         let handle = std::thread::spawn(move || {
             println!("Fetching Grand Prix data from {}", &race_url);
@@ -81,12 +83,16 @@ fn parse_all_results_page(
     let lock = Arc::into_inner(output_data).ok_or(Error::ParseRaceResults)?;
     let mut output_data = lock.into_inner().map_err(|_| Error::ParseRaceResults)?;
     output_data.sort_by(|a, b| a.round.cmp(&b.round));
+
     Ok(output_data)
 }
 
 fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
+    // constructing all selectors
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
     let span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
+    let p_selector = scraper::Selector::parse("p").map_err(|_| Error::Scraper)?;
+    let driver_span_selector = scraper::Selector::parse("span.test").map_err(|_| Error::Scraper)?;
     let table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).map_err(|_| Error::Scraper)?;
 
     let document = scraper::Html::parse_document(&body);
@@ -107,8 +113,13 @@ fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
         // driver number, useless
         iter.next();
 
+        // name of the driver
         let driver_name = iter.next().ok_or_else(|| Error::ParseRaceResults)?;
-        let mut span_iter = driver_name.select(&span_selector);
+
+        let p_driver_name = driver_name.select(&p_selector).next().unwrap();
+        let span_driver_name = p_driver_name.select(&driver_span_selector).next().unwrap();
+
+        let mut span_iter = span_driver_name.select(&span_selector);
         let first = span_iter
             .next()
             .ok_or_else(|| Error::ParseRaceResults)?
@@ -162,7 +173,7 @@ impl DataFetcher for CompletedRace {
     fn resource_url() -> String {
         println!("Fetching data for all completed Grand Prix");
         let calendar_race_results = format!("en/results/{}/races", *CURR_YEAR);
-        format!("{}/{}", BASE_URL, calendar_race_results)
+        format!("{}/{}", BASE_URL, calendar_race_results) 
     }
 
     fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A> {
