@@ -40,7 +40,7 @@ fn run() -> Result<()> {
         match arg.as_ref() {
             "list" => {
                 let mut output = String::new();
-                let info = "[x] Completed || [-> This weekend || [ ] Pending";
+                let info = "[x] Completed || [-> This weekend || [ ] Pending || SP Sprint Weekend";
 
                 let mut bottom_border_len: usize = info.len();
                 for race in Schedule::get_data()?.iter() {
@@ -178,6 +178,7 @@ fn run() -> Result<()> {
                     println!("--------");
                 }
                 let tmp_dir = std::env::temp_dir().join(TMP_DIR_NAME);
+                println!("{:?}", tmp_dir);
                 for entry in read_dir(tmp_dir)? {
                     let entry = entry?;
                     println!("Removing {:?}", entry.file_name());

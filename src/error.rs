@@ -11,6 +11,7 @@ pub enum Error {
     ParseDriverInfo,
     ParseTeamInfo,
     ParseRaceResults,
+    UnSupportedOS,
     // NoResults,
     InvalidArgs,
 }
@@ -27,6 +28,7 @@ impl Display for Error {
             Self::ParseDriverInfo => write!(fmt, "Driver table row parsing failed"),
             Self::ParseTeamInfo => write!(fmt, "Team table row parsing failed"),
             Self::ParseRaceResults => write!(fmt, "Race results table parsing failed"),
+            Self::UnSupportedOS => write!(fmt, "Race results table parsing failed"),
             // Self::NoResults => write!(
             //     fmt,
             //     "There are no results for any GP, yet. Try `f1gp pull` to get new data"
@@ -59,6 +61,12 @@ impl From<ureq::Error> for Error {
 impl From<std::num::ParseIntError> for Error {
     fn from(err: std::num::ParseIntError) -> Self {
         Self::ParseInt(err)
+    }
+}
+
+impl From<std::env::VarError> for Error {
+    fn from(_err: std::env::VarError) -> Self {
+        Self::UnSupportedOS
     }
 }
 

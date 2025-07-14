@@ -2,8 +2,9 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::env::consts::OS;
 
-use crate::error::Result;
+use crate::error::{Result, Error};
 
 pub const TMP_DIR_NAME: &str = "f1_schedule_standings";
 pub const F1_TABLE_SELECTOR: &str = "table.f1-table > tbody > tr";
@@ -111,5 +112,14 @@ pub trait DataFetcher {
     {
         let _ = Self::get_data_internal_with_pull(true)?;
         Ok(())
+    }
+}
+
+pub fn get_profile_path() -> Result<String> {
+    match OS {
+        "windows" => Ok(std::env::var("userprofile")?),
+        "linux" => Ok(std::env::var("HOME")?),
+        "macos" => Ok(std::env::var("HOME")?),
+        _ => Err(Error::UnSupportedOS),
     }
 }
