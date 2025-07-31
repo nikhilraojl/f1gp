@@ -90,9 +90,8 @@ fn parse_all_results_page(
 fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
     // constructing all selectors
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
-    let span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
     let p_selector = scraper::Selector::parse("p").map_err(|_| Error::Scraper)?;
-    let driver_span_selector = scraper::Selector::parse("span.test").map_err(|_| Error::Scraper)?;
+    let driver_span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
     let table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).map_err(|_| Error::Scraper)?;
 
     let document = scraper::Html::parse_document(&body);
@@ -117,9 +116,13 @@ fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
         let driver_name = iter.next().ok_or_else(|| Error::ParseRaceResults)?;
 
         let p_driver_name = driver_name.select(&p_selector).next().unwrap();
-        let span_driver_name = p_driver_name.select(&driver_span_selector).next().unwrap();
+        let mut span_iter = p_driver_name.select(&driver_span_selector);
 
-        let mut span_iter = span_driver_name.select(&span_selector);
+        // skipping
+        span_iter.next().unwrap();
+        span_iter.next().unwrap();
+        span_iter.next().unwrap();
+
         let first = span_iter
             .next()
             .ok_or_else(|| Error::ParseRaceResults)?

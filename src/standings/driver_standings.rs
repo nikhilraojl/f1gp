@@ -33,14 +33,16 @@ fn parse_driver_table_row(element: ElementRef) -> Result<PositionInfo> {
 
     let p_selector = scraper::Selector::parse("p").map_err(|_| Error::Scraper)?;
     let a_selector = scraper::Selector::parse("a").map_err(|_| Error::Scraper)?;
-    let driver_span_selector = scraper::Selector::parse("span.test").map_err(|_| Error::Scraper)?;
-    let name_span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
+    let driver_span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
 
-    let p_driver_name = driver_name.select(&p_selector).next().unwrap(); 
-    let a_driver_name = p_driver_name.select(&a_selector).next().unwrap(); 
-    let span_driver_name = a_driver_name.select(&driver_span_selector).next().unwrap(); 
+    let p_driver_name = driver_name.select(&p_selector).next().unwrap();
+    let a_driver_name = p_driver_name.select(&a_selector).next().unwrap();
 
-    let mut span_iter = span_driver_name.select(&name_span_selector);
+    let mut span_iter = a_driver_name.select(&driver_span_selector);
+
+    // skipping spans which are not required
+    span_iter.next().unwrap(); 
+    span_iter.next().unwrap();
 
     let first = span_iter
         .next()
