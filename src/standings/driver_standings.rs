@@ -41,7 +41,7 @@ fn parse_driver_table_row(element: ElementRef) -> Result<PositionInfo> {
     let mut span_iter = a_driver_name.select(&driver_span_selector);
 
     // skipping spans which are not required
-    span_iter.next().unwrap(); 
+    span_iter.next().unwrap();
     span_iter.next().unwrap();
 
     let first = span_iter

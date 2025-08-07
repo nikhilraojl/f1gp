@@ -56,7 +56,6 @@ fn parse_all_results_page(
             .ok_or_else(|| Error::ParseRaceResults)?
             .to_owned();
 
-
         let race_url = format!("{}/{}", BASE_URL, link);
 
         let handle = std::thread::spawn(move || {
@@ -176,7 +175,7 @@ impl DataFetcher for CompletedRace {
     fn resource_url() -> String {
         println!("Fetching data for all completed Grand Prix");
         let calendar_race_results = format!("en/results/{}/races", *CURR_YEAR);
-        format!("{}/{}", BASE_URL, calendar_race_results) 
+        format!("{}/{}", BASE_URL, calendar_race_results)
     }
 
     fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A> {

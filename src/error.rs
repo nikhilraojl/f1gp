@@ -5,7 +5,7 @@ pub enum Error {
     Fmt(std::fmt::Error),
     IO(std::io::Error),
     SerdeJson(serde_json::Error),
-    Ureq(Box<ureq::Error>),
+    Ureq(ureq::Error),
     ParseInt(std::num::ParseIntError),
     Scraper,
     ParseDriverInfo(f32),
@@ -21,7 +21,10 @@ impl Display for Error {
             Self::Fmt(err) => write!(fmt, "{err}"),
             Self::IO(err) => write!(fmt, "{err}"),
             Self::SerdeJson(err) => write!(fmt, "{err}"),
-            Self::Ureq(err) => write!(fmt, "{err}"),
+            Self::Ureq(err) => write!(
+                fmt,
+                "Something went wrong, please check internet connection\n{err}"
+            ),
             Self::Scraper => write!(fmt, "HTML parsing failed"),
             Self::ParseInt(err) => write!(fmt, "{err}"),
             Self::ParseDriverInfo(step) => {
@@ -55,7 +58,7 @@ impl From<serde_json::Error> for Error {
 }
 impl From<ureq::Error> for Error {
     fn from(err: ureq::Error) -> Self {
-        Self::Ureq(Box::new(err))
+        Self::Ureq(err)
     }
 }
 impl From<std::num::ParseIntError> for Error {

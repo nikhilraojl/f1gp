@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 pub const TMP_DIR_NAME: &str = "f1_schedule_standings";
 pub const F1_TABLE_SELECTOR: &str = "table.f1-table > tbody > tr";
@@ -41,7 +41,7 @@ pub trait DataFetcher {
     }
 
     fn fetch_internet_resource() -> Result<String> {
-        let body: String = ureq::get(&Self::resource_url()).call()?.into_string()?;
+        let body = ureq::get(&Self::resource_url()).call()?.into_string()?;
         Ok(body)
     }
 
