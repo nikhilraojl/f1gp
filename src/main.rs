@@ -16,7 +16,7 @@ use results::CompletedRace;
 use schedule::Schedule;
 use standings::driver_standings::DriverStandings;
 use standings::team_standings::TeamStandings;
-use utils::{DataFetcher, TMP_DIR_NAME};
+use utils::{data_store_loc, DataFetcher};
 
 static CURR_YEAR: LazyLock<i32> = LazyLock::new(|| Local::now().year());
 
@@ -171,8 +171,8 @@ fn run() -> Result<()> {
                     println!("DRY RUN:");
                     println!("--------");
                 }
-                let tmp_dir = std::env::temp_dir().join(TMP_DIR_NAME);
-                for entry in read_dir(tmp_dir)? {
+                let data_dir = data_store_loc();
+                for entry in read_dir(data_dir)? {
                     let entry = entry?;
                     println!("Removing {:?}", entry.file_name());
                     if !dry_run {

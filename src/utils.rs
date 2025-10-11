@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::error::Result;
 
-pub const TMP_DIR_NAME: &str = "f1_schedule_standings";
+pub const DATA_DIR_NAME: &str = "f1_schedule_standings";
 pub const F1_TABLE_SELECTOR: &str = "#results-table > div > table > tbody > tr";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -24,6 +24,17 @@ pub struct QualiPositionInfo {
     pub q3: Option<String>,
 }
 
+pub fn data_store_loc() -> PathBuf {
+    let loc;
+    if let Some(home_dir) = std::env::home_dir() {
+        loc = home_dir.join(DATA_DIR_NAME);
+    } else {
+        loc = std::env::temp_dir().join(DATA_DIR_NAME);
+    }
+
+    return loc;
+}
+
 pub trait DataFetcher {
     type A;
 
@@ -31,13 +42,13 @@ pub trait DataFetcher {
     fn resource_url() -> String;
     fn process_data(raw_data: String, file_path: &Path) -> Result<Self::A>;
 
-    fn get_or_create_tmp_dir() -> Result<PathBuf> {
-        let tmp_dir = std::env::temp_dir().join(TMP_DIR_NAME);
-        if !tmp_dir.exists() {
-            std::fs::create_dir(&tmp_dir)?;
+    fn get_or_create_data_dir() -> Result<PathBuf> {
+        let data_dir = data_store_loc();
+        if !data_dir.exists() {
+            std::fs::create_dir(&data_dir)?;
         }
 
-        Ok(tmp_dir)
+        Ok(data_dir)
     }
 
     fn fetch_internet_resource() -> Result<String> {
@@ -66,7 +77,7 @@ pub trait DataFetcher {
     }
 
     fn get_cache_file_path() -> Result<PathBuf> {
-        let tmp_dir = Self::get_or_create_tmp_dir()?;
+        let tmp_dir = Self::get_or_create_data_dir()?;
         let file_name = Self::cache_file_name();
         let file_path = tmp_dir.join(file_name);
         Ok(file_path)
