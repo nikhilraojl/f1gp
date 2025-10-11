@@ -31,12 +31,10 @@ fn parse_driver_table_row(element: ElementRef) -> Result<PositionInfo> {
     // driver name
     let driver_name = iter.next().ok_or(Error::ParseDriverInfo(2.0))?;
 
-    let p_selector = scraper::Selector::parse("p").map_err(|_| Error::Scraper)?;
     let a_selector = scraper::Selector::parse("a").map_err(|_| Error::Scraper)?;
     let driver_span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
 
-    let p_driver_name = driver_name.select(&p_selector).next().unwrap();
-    let a_driver_name = p_driver_name.select(&a_selector).next().unwrap();
+    let a_driver_name = driver_name.select(&a_selector).next().unwrap();
 
     let mut span_iter = a_driver_name.select(&driver_span_selector);
 

@@ -89,7 +89,6 @@ fn parse_all_results_page(
 fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
     // constructing all selectors
     let td_selector = scraper::Selector::parse("td").map_err(|_| Error::Scraper)?;
-    let p_selector = scraper::Selector::parse("p").map_err(|_| Error::Scraper)?;
     let driver_span_selector = scraper::Selector::parse("span").map_err(|_| Error::Scraper)?;
     let table_selector = scraper::Selector::parse(F1_TABLE_SELECTOR).map_err(|_| Error::Scraper)?;
 
@@ -114,8 +113,7 @@ fn fetch_parse_individual_race(body: String) -> Result<Vec<PositionInfo>> {
         // name of the driver
         let driver_name = iter.next().ok_or_else(|| Error::ParseRaceResults)?;
 
-        let p_driver_name = driver_name.select(&p_selector).next().unwrap();
-        let mut span_iter = p_driver_name.select(&driver_span_selector);
+        let mut span_iter = driver_name.select(&driver_span_selector);
 
         // skipping
         span_iter.next().unwrap();

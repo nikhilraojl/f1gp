@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 pub const TMP_DIR_NAME: &str = "f1_schedule_standings";
-pub const F1_TABLE_SELECTOR: &str = "table.f1-table > tbody > tr";
+pub const F1_TABLE_SELECTOR: &str = "#results-table > div > table > tbody > tr";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PositionInfo {
